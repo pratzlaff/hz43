@@ -1,0 +1,13 @@
+#! /bin/bash
+
+hrci_onaxis=$(grep '^[0-9]' obsids_hz43 | grep -i hrc-i | grep -v '260[13]' | grep -v 18415 | cut -f1)
+hrcs=$(grep '^[0-9]' obsids_hz43 | grep -i hrc-s | cut -f1)
+
+echo $hrcs
+echo $hrci_onaxis
+
+export PYTHONPATH=/data/legs/rpete/flight/analysis_functions
+
+env ARFPATH=./arfs/I_qe_N0011:../qeu/ARD/v13/arfs/S_qeu_N0013 \
+    /usr/bin/python src/flux_ratios.py --pdf plots/hrcsi_flux_ratio_I_qe_N0011_S_qeu_N0013.pdf "$hrcs" "$hrci_onaxis"
+

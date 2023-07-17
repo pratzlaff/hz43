@@ -1,0 +1,9 @@
+*~
+Makefile
+arfs/
+asphists/
+caldb_tests/
+data/
+misc/combined.fits 
+model/pickle/
+plots

@@ -1,0 +1,26 @@
+#! /bin/bash
+
+. src/functions.bash
+
+. ~/.bash_aliases
+shopt -s expand_aliases
+
+ciao
+
+infile_list=./misc/hrci_on_axis_infiles
+
+rm -f "$infile_list"
+
+for src in $(sources)
+do
+    for o in $(source2obsids "$src")
+    do
+	[ "$o" -eq 1516 -o "$o" -eq 1004 -o "$o" -eq 1005 -o "$o" -eq 2601 -o "$o" -eq 2603 -o "$o" -eq 18415 ] && continue
+	instruments $o | grep -qi hrc-i || continue
+	ls $(pwd)/data/"$src"/"$o"/tg_reprocess/*_evt2.fits | perl -ple '$_ .= "[events]"' >> "$infile_list"
+    done
+done
+
+dmmerge '@'"$infile_list" ./misc/combined.fits columnList='tg_d,tg_r,tg_lam,tg_mlam' clobber=yes
+ds9 ./misc/combined.fits -bin cols tg_r tg_d -bin factor .0004882 -scale mode 99.5 -cmap heat -scale sqrt
+

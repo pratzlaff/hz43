@@ -1,0 +1,18 @@
+statistic lstat
+data ../qeu_hz43/data/59/tg_reprocess/hrcf00059N005_pha2.fits{1}
+resp ../qeu_hz43/data/59/tg_reprocess/LEG_-1.rmf
+arf ../qeu_hz43/data/59/tg_reprocess/hrcf00059N005LEG_-1_garf.fits
+model atable{wd.mod}
+51000
+7.9
+3e17
+freeze 1 2
+setplot wave
+ignore **-**
+notice 65.-155.
+fit
+setplot rebin 50 1000
+setplot xlog off
+setplot ylog off
+cpd /xs
+plot ldata ratio

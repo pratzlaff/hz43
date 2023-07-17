@@ -1,0 +1,9 @@
+#! /bin/bash
+
+mkdir -p plots
+
+for v in N0008 N0009 N0010
+do
+    env ARFPATH=./arfs/I_qe_${v}:./arfs/S_qeu_N0008 /usr/bin/python hrci_predicted_zeroth_counts.py -p plots/hrci_predicted_zeroth_counts_qe_$v.pdf
+
+done

@@ -1,0 +1,110 @@
+#! /bin/bash
+
+obsids="$@"
+
+<<'COMMENT'
+. ./src/functions.bash
+. /data/legs/rpete/flight/analysis_functions/util.bash
+obsids=$(source2obsids hz43)
+#obsids=$(grep '^[0-9]' obsids/hz43 | grep -i hrc-i | cut -f1)
+screen -dmS arfs bash -c 'exec bash'
+n=6
+for i in {1..6}
+do
+  o=$(i_of_n $i $n $obsids)
+  screen -S arfs -X screen bash -c "time /bin/bash 0READMEs/04_README_arfs $o; exec bash"
+done
+screen -rS arfs
+COMMENT
+
+. /data/legs/rpete/flight/analysis_functions/arfs.bash
+. src/functions.bash
+
+. ~/.bash_aliases
+shopt -s expand_aliases
+
+ciao -o
+
+. /data/legs/rpete/flight/analysis_functions/tmppdir.bash
+
+declare -A iqe sqeu
+
+# HRC-I QE directories
+iqe=(
+  #[N0008]=/data/legs/rpete/flight/hrci_qe/N0009
+  #[N0009]=/data/legs/rpete/flight/hrci_qe/N0009/qe
+  #[N0010]=/data/legs/rpete/flight/hrci_qe/N0010/qe
+  #[N0011]=/data/legs/rpete/flight/hrci_qe/N0011/qe
+  #[N0012]=/data/legs/rpete/flight/hrci_qe/N0012/qe
+  #[N0013]=/data/legs/rpete/flight/hrci_qe/N0013/qe
+  #[N0014]=/data/legs/rpete/flight/hrci_qe/N0014/qe
+  [caldb]=$CALDB/data/chandra/hrc/qe
+)
+isuffix=.20210812j
+isuffix=''
+
+# HRC-S QEU directories
+sqeu=(
+  #[N0005]=/data/legs/rpete/flight/qeu/ARD/v07
+  #[N0007]=/data/legs/rpete/flight/qeu/ARD/v07
+  #[N0008]=/data/legs/rpete/flight/qeu/ARD/v08/qeu
+  #[N0009pre]=/data/legs/rpete/flight/qeu/ARD/v09/qeu
+  #[N0009]=/data/legs/rpete/flight/qeu/ARD/v09/qeu
+  #[N0010]=/data/legs/rpete/flight/qeu/ARD/v10/qeu
+  #[N0014]=/data/legs/rpete/flight/hrcs_qeu/ARD/v14/qeu
+  #[N0098]=/data/legs/rpete/flight/hrcs_qeu/ARD/v98/qeu
+  #[N0099]=/data/legs/rpete/flight/hrcs_qeu/ARD/v99/qeu
+  [caldb]=$CALDB/data/chandra/hrc/qeu
+)
+
+for o in $obsids
+do
+  src=$(obsid2source $o)
+  punlearn ardlib
+
+  indir="data/$src/$o/tg_reprocess"
+  pha2=$(ls "$indir"/*_pha2.fits)
+
+  true && instruments "$o" | grep -qi hrc-i && {
+    for v in "${!iqe[@]}"; do
+      outdir=./arfs/I_qe_"${v}${isuffix}"
+      qedir=${iqe["$v"]}
+      [ $v == caldb ] && {
+	outdir=./arfs/caldb
+	qefile=$(match_caldb_file "$pha2" qe "${qedir}${isuffix}")
+      } ||
+      {
+          qefile=$(match_caldb_file "$pha2" qe "${qedir}${isuffix}" "$v")
+      }
+      pset ardlib AXAF_HRC-I_QE_FILE="$qefile"
+      generate_0th_arf "$indir" "$outdir"
+      generate_garfs "$indir" "$outdir"
+    done
+  }
+
+  true && instruments "$o" | grep -qi hrc-s && {
+    for v in "${!sqeu[@]}"; do
+      outdir=./arfs/S_qeu_"$v"
+      qeudir=${sqeu["$v"]}
+      [ $v == caldb ] && {
+	outdir=./arfs/caldb
+        qeufile=$(match_caldb_file "$pha2" qeu "$qeudir")
+      } ||
+      {
+        qeufile=$(match_caldb_file "$pha2" qeu "$qeudir" "$v")
+      }
+      pset ardlib AXAF_HRC-S1_QEU_FILE="$qeufile"'[AXAF_QEU1]'
+      pset ardlib AXAF_HRC-S2_QEU_FILE="$qeufile"'[AXAF_QEU2]'
+      pset ardlib AXAF_HRC-S3_QEU_FILE="$qeufile"'[AXAF_QEU3]'
+      qefile=$(match_caldb_file "$pha2" qe "$CALDB"/data/chandra/hrc/qe)
+      pset ardlib AXAF_HRC-S1_QE_FILE="$qefile"'[AXAF_QE1]'
+      pset ardlib AXAF_HRC-S2_QE_FILE="$qefile"'[AXAF_QE2]'
+      pset ardlib AXAF_HRC-S3_QE_FILE="$qefile"'[AXAF_QE3]'
+      generate_0th_arf "$indir" "$outdir"
+      generate_garfs "$indir" "$outdir"
+    done
+  }
+
+  punlearn ardlib
+
+done

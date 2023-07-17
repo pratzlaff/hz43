@@ -1,0 +1,20 @@
+#! /bin/bash
+
+# restore Nick's corrected, non-LTE models, the last of which is the
+# interpolated T=51000, log g=7.9 which is used in this analysis
+cd non_LTE
+echo 'print_models; exit' | gdl
+cd -
+
+# restore Nick's observed ratios, print them to a text file
+cd ratios
+echo 'print_ratios ; exit' | gdl
+cd -
+
+# do CARMA simulations
+python model_ratios.py
+
+# create plots
+python plot_models.py
+ssh ascda3 mkdir -p /data/wdocs/rpete/twiki/hrcs_qeu/N0007
+scp -p model_plots_*.png ascda3:/data/wdocs/rpete/twiki/hrcs_qeu/N0007

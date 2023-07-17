@@ -1,0 +1,24 @@
+#! /bin/bash
+
+. ~/.bash_aliases
+shopt -s expand_aliases
+
+ciao
+
+#
+# download data
+#
+
+. src/functions.bash
+
+for src in $(sources)
+do
+    mkdir -p data/$src
+    cd data/$src
+    for o in $(source2obsids $src)
+    do
+	files=evt1,bpix,msk,flt,asol,dtf
+	download_chandra_obsid $o $files
+    done
+    cd -
+done

@@ -1,0 +1,88 @@
+#! /bin/bash
+
+. src/functions.bash
+
+export PYTHONPATH=/data/legs/rpete/flight/analysis_functions
+
+mkdir -p plots
+
+#env ARFPATH=./arfs/I_qe_N0009:./arfs/S_qeu_N0005 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0009_S_qeu_N0005.pdf
+
+#env ARFPATH=./arfs/I_qe_N0009:./arfs/S_qeu_N0008pre \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0009_S_qeu_N0008pre.pdf
+
+#env ARFPATH=./arfs/I_qe_N0009:./arfs/S_qeu_N0008 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0009_S_qeu_N0008.pdf
+
+#env ARFPATH=./arfs/I_qe_N0010:./arfs/S_qeu_N0008 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0010_S_qeu_N0008.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:./arfs/S_qeu_N0009 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0009.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:./arfs/S_qeu_N0008pre \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0008pre.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:./arfs/S_qeu_N0009pre \
+#/usr/bin/python3 src/slopes.py \
+		#--tg_reprocess_hrcs tg_reprocess_pifilter \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0009pre_pifilter.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:./arfs/S_qeu_N0009pre \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0009pre.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:../hrcs_qeu/ARD/v10/arfs/S_qeu_N0010 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0010.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:../hrcs_qeu/ARD/v11/arfs/S_qeu_N0011 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0011.pdf
+
+#env ARFPATH=./arfs/I_qe_N0011:../hrcs_qeu/ARD/v12/arfs/S_qeu_N0012 \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_I_qe_N0011_S_qeu_N0012.pdf
+
+env ARFPATH=./arfs/I_qe_N0012:../hrcs_qeu/ARD/v11/arfs/S_qeu_N0011pre \
+/usr/bin/python3 src/slopes.py \
+		--pdf plots/hz43_lc_rate_I_qe_N0012_S_qeu_N0011pre.pdf
+
+false && {
+for iv in 12 13
+do
+  for v in 14 98 99
+  do
+    env ARFPATH=./arfs/I_qe_N00${iv}:./arfs/S_qeu_N00${v} \
+    /usr/bin/python3 src/slopes.py \
+		    --pdf plots/hz43_lc_rate_I_qe_N00${iv}_S_qeu_N00${v}.pdf
+  done
+done
+}
+
+#env ARFPATH=./arfs/caldb \
+#/usr/bin/python3 src/slopes.py \
+		#--pdf plots/hz43_lc_rate_caldb.pdf
+#
+# To start, determine the valid wavelength ranges for the HRC-S outer
+# plates, record results in hz43_wlimits.py
+#
+false && {
+    [ `hostname` == 'legs' ] &&
+        source /usr/local/ciao/bin/ciao.sh -o ||
+        source /soft/ciao/bin/ciao.sh -o
+
+    for obsid in $(source2obsids hz43)
+    do
+	instruments $obsid | grep -qi hrc-s || continue
+	echo $obsid
+	/usr/bin/python3 plot_spectrum.py $obsid
+    done
+}

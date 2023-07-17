@@ -1,0 +1,74 @@
+#! /bin/bash
+
+. ~/.bash_aliases
+shopt -s expand_aliases
+
+ciao -o
+
+. /data/legs/rpete/flight/analysis_functions/caldb_files.bash
+
+. src/functions.bash
+
+export PYTHONPATH=/data/legs/rpete/flight/analysis_functions
+
+outdir=./misc/txt
+mkdir -p $outdir
+
+chipx=2200
+chipy=8900
+
+sqever=N0016
+sqedir=/data/legs/rpete/flight/hrcs_qe/$sqever/qe
+
+sqeuver=15
+sqeudir=/data/legs/rpete/flight/hrcs_qeu/ARD/v${sqeuver}/qeu
+
+for o in $(source2obsids hz43)
+do
+
+    instruments $o | grep -qi hrc-s || continue
+    obsfile=$(ls ./data/hz43/$o/tg_reprocess/hrcf*_pha2.fits)
+
+    sqefile=$(match_caldb_file "$obsfile" qe "$sqedir" "$sqever")
+    pset ardlib AXAF_HRC-S1_QE_FILE="$sqefile"'[AXAF_QE1]'
+    pset ardlib AXAF_HRC-S2_QE_FILE="$sqefile"'[AXAF_QE2]'
+    pset ardlib AXAF_HRC-S3_QE_FILE="$sqefile"'[AXAF_QE3]'
+
+    sqeufile=$(match_caldb_file "$obsfile" qeu "$sqeudir" N00"$sqeuver")
+    pset ardlib AXAF_HRC-S1_QEU_FILE="$sqeufile"'[AXAF_QEU1]'
+    pset ardlib AXAF_HRC-S2_QEU_FILE="$sqeufile"'[AXAF_QEU2]'
+    pset ardlib AXAF_HRC-S3_QEU_FILE="$sqeufile"'[AXAF_QEU3]'
+
+    for chip in {1..3}
+    do
+	wmin=1
+	wmax=180
+	[[ chip -eq 2 ]] && wmin=1
+	(( n = wmax-wmin+1 ))
+
+	true && {
+	    perl ./src/qeu_wgrid.pl $sqeufile ${chip} $chipx $chipy $wmin $wmax $n > $outdir/${o}_perl_qeu_S${chip}.txt
+	    ./src/ardlib_qe_wgrid HRC-S${chip} $obsfile $chipx $chipy $wmin $wmax $n > $outdir/${o}_ardlib_qe_S${chip}.txt
+	    ./src/ardlib_qe_wgrid HRC-S${chip}';UNIFORM' $obsfile $chipx $chipy $wmin $wmax $n > $outdir/${o}_ardlib_qe_uniform_S${chip}.txt
+	    ./src/ardlib_qe_wgrid HRC-S${chip}';QE=1' $obsfile $chipx $chipy $wmin $wmax $n > $outdir/${o}_ardlib_qeu_S${chip}.txt
+	}
+
+	false && {
+	    suffix="0th.arf"
+	    [[ $chip -eq 1 ]] && suffix=LEG_1_garf.fits
+	    [[ $chip -eq 3 ]] && suffix=LEG_-1_garf.fits
+	    
+	    /usr/bin/python3 ./src/arf_wgrid.py \
+			     ./arfs/caldb/${o}_${suffix} \
+			     $wmin $wmax $n \
+			     > $outdir/${o}_arf_S${chip}.txt
+	}
+
+    done
+
+done
+
+punlearn ardlib
+
+#/usr/bin/python3 src/plot_txt.py arf -o plots/arf_ratios.pdf
+#/usr/bin/python3 src/plot_txt.py arf -o plots/arf_ratios.pdf

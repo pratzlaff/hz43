@@ -1,0 +1,7 @@
+#! /bin/bash
+
+export PYTHONPATH=/data/legs/rpete/flight/analysis_functions
+
+/usr/bin/python src/filtered_ratio.py --pdf plots/filtered_ratio.pdf
+#/usr/bin/python src/filtered_ratio.py --png plots/filtered_ratio_
+
