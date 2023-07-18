@@ -31,38 +31,24 @@ declare -A iqe sqeu
 
 # HRC-I QE directories
 iqe=(
-  #[N0008]=/data/legs/rpete/flight/hrci_qe/N0009
-  #[N0009]=/data/legs/rpete/flight/hrci_qe/N0009/qe
-  #[N0010]=/data/legs/rpete/flight/hrci_qe/N0010/qe
-  #[N0011]=/data/legs/rpete/flight/hrci_qe/N0011/qe
-  #[N0012]=/data/legs/rpete/flight/hrci_qe/N0012/qe
-  #[N0013]=/data/legs/rpete/flight/hrci_qe/N0013/qe
-  #[N0014]=/data/legs/rpete/flight/hrci_qe/N0014/qe
-  [caldb]=$CALDB/data/chandra/hrc/qe
+  #[N0015]=/data/legs/rpete/flight/hrci_qe/N0015/qe
+  #[caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j
 isuffix=''
 
 # HRC-S QEU directories
 sqeu=(
-  #[N0005]=/data/legs/rpete/flight/qeu/ARD/v07
-  #[N0007]=/data/legs/rpete/flight/qeu/ARD/v07
-  #[N0008]=/data/legs/rpete/flight/qeu/ARD/v08/qeu
-  #[N0009pre]=/data/legs/rpete/flight/qeu/ARD/v09/qeu
-  #[N0009]=/data/legs/rpete/flight/qeu/ARD/v09/qeu
-  #[N0010]=/data/legs/rpete/flight/qeu/ARD/v10/qeu
-  #[N0014]=/data/legs/rpete/flight/hrcs_qeu/ARD/v14/qeu
-  #[N0098]=/data/legs/rpete/flight/hrcs_qeu/ARD/v98/qeu
-  #[N0099]=/data/legs/rpete/flight/hrcs_qeu/ARD/v99/qeu
-  [caldb]=$CALDB/data/chandra/hrc/qeu
+  #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
+  #[N0017]=/data/legs/rpete/flight/qeu/ARD/v17/qeu
+  #[caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
 for o in $obsids
 do
-  src=$(obsid2source $o)
   punlearn ardlib
 
-  indir="data/$src/$o/tg_reprocess"
+  indir="data/$o/tg_reprocess"
   pha2=$(ls "$indir"/*_pha2.fits)
 
   true && instruments "$o" | grep -qi hrc-i && {

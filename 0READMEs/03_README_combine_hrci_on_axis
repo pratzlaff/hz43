@@ -11,14 +11,11 @@ infile_list=./misc/hrci_on_axis_infiles
 
 rm -f "$infile_list"
 
-for src in $(sources)
+for o in $(obsids)
 do
-    for o in $(source2obsids "$src")
-    do
-	[ "$o" -eq 1516 -o "$o" -eq 1004 -o "$o" -eq 1005 -o "$o" -eq 2601 -o "$o" -eq 2603 -o "$o" -eq 18415 ] && continue
-	instruments $o | grep -qi hrc-i || continue
-	ls $(pwd)/data/"$src"/"$o"/tg_reprocess/*_evt2.fits | perl -ple '$_ .= "[events]"' >> "$infile_list"
-    done
+    [ "$o" -eq 1516 -o "$o" -eq 1004 -o "$o" -eq 1005 -o "$o" -eq 2601 -o "$o" -eq 2603 -o "$o" -eq 18415 ] && continue
+    instruments $o | grep -qi hrc-i || continue
+    ls $(pwd)/data/"$o"/tg_reprocess/*_evt2.fits | perl -ple '$_ .= "[events]"' >> "$infile_list"
 done
 
 dmmerge '@'"$infile_list" ./misc/combined.fits columnList='tg_d,tg_r,tg_lam,tg_mlam' clobber=yes

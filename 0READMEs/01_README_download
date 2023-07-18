@@ -11,14 +11,10 @@ ciao
 
 . src/functions.bash
 
-for src in $(sources)
+mkdir -p data
+cd data
+for o in $(obsids)
 do
-    mkdir -p data/$src
-    cd data/$src
-    for o in $(source2obsids $src)
-    do
-	files=evt1,bpix,msk,flt,asol,dtf
-	download_chandra_obsid $o $files
-    done
-    cd -
+    files=evt1,bpix,msk,flt,asol,dtf
+    download_chandra_obsid $o $files
 done

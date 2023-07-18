@@ -1,20 +1,6 @@
 basedir=/data/legs/rpete/flight/hz43
 datadir="${basedir}/data"
 
-sources() {
-    echo hz43
-}
-
-obsid2source() {
-    local obsid="$1"
-    for src in `sources`
-    do
-	source2obsids $src | grep -q $obsid && { echo $src; return; }
-    done
-    echo "unrecognized obsid=$obsid" 1>&2
-    return 1
-}
-
 band_range() {
     local band="$1"
     case "$band" in
@@ -28,22 +14,20 @@ band_range() {
     esac
 }
 
-source2obsids()
+obsids()
 {
-    local src="$1"
-    grep '^[0-9]' "${basedir}/obsids/${src}" | cut -f 1 #| tail -3
-#    grep '^[0-9]' "${basedir}/obsids/${src}" | grep -i hrc-s | cut -f 1 | tail -6 | head -2
+    grep '^[0-9]' "${basedir}/obsids" | cut -f 1 #| tail -3
+#    grep '^[0-9]' "${basedir}/obsids" | grep -i hrc-s | cut -f 1 | tail -6 | head -2
 }
 
 instruments()
 {
     local obsid="$1"
-    local src=`obsid2source $obsid` ||  { echo "unrecognized obsid=$obsid" 1>&2; return 1; }
-    local f=$(ls "$datadir/$src/$obsid"/tg_reprocess/*_evt2.fits 2>/dev/null)
+    local f=$(ls "$datadir/$obsid"/tg_reprocess/*_evt2.fits 2>/dev/null)
 
     if [ -z "$f" ]
     then
-	grep "$obsid" "${basedir}/obsids/${src}" | perl -anle 'print $F[1]'
+	grep "$obsid" "${basedir}/obsids" | perl -anle 'print $F[1]'
 	return
     fi
 
@@ -129,13 +113,12 @@ tg_order_list()
 # OBSOLETE
 xspec_fit()
 {
-    local src="$1"
     local obsid="$2"
     local elow=0.5
     local ehigh=8.0
 
-    local tgdir=data/$src/$obsid/tg_reprocess
-    local outdir=data/$src/$obsid/fit
+    local tgdir=data/$obsid/tg_reprocess
+    local outdir=data/$obsid/fit
     mkdir -p $outdir
 
     local pha2=`ls "$tgdir"/hrcf*_pha2.fits`
@@ -225,14 +208,13 @@ EOP
 sherpa_fit()
 {
     local obsid="$1"
-    local src=`obsid2source "$obsid"` || { echo "unrecognized obsid=$obsid" 1>&2; return 1; }
 
-    local tgdir=data/$src/$obsid/tg_reprocess
+    local tgdir=data/$obsid/tg_reprocess
 
     local band
     for band in 0 1 2 3 4 5
     do
-	local fitdir=data/$src/$obsid/fit/B"$band"
+	local fitdir=data/$obsid/fit/B"$band"
 
 	rm -rf "$fitdir"
 	mkdir -p "$fitdir"
@@ -242,14 +224,14 @@ sherpa_fit()
 	    *HRC*)
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    LEG \
 		    1 \
 		    neg \
 		    $band
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    LEG \
 		    2 \
 		    pos \
@@ -258,7 +240,7 @@ sherpa_fit()
 	    *LETG*)
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    LEG \
 		    1 \
 		    neg \
@@ -267,7 +249,7 @@ sherpa_fit()
 		    $tgdir/LEG_-1.rmf
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    LEG \
 		    4 \
 		    pos \
@@ -284,7 +266,7 @@ sherpa_fit()
 	    *HETG*)
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    HEG \
 		    1 \
 		    neg \
@@ -293,7 +275,7 @@ sherpa_fit()
 		    $tgdir/HEG_-1.rmf
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    HEG \
 		    4 \
 		    pos \
@@ -302,7 +284,7 @@ sherpa_fit()
 		    $tgdir/HEG_1.rmf
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    MEG \
 		    7 \
 		    neg \
@@ -311,7 +293,7 @@ sherpa_fit()
 		    $tgdir/MEG_-1.rmf
 		sherpa_fit_generic \
 		    $obsid \
-		    data/$src/$obsid \
+		    data/$obsid \
 		    MEG \
 		    10 \
 		    pos \
@@ -461,11 +443,9 @@ hrcs_garfs_old() {
     local outdir="$2"
     local lsfparmversion="$3"
 
-    local source=$(obsid2source "$obsid")
-
     mkdir -p "$outdir"
 
-    local datadir="$datadir/$source/$obsid"
+    local datadir="$datadir/$obsid"
 
     local pha2=$(ls "$datadir"/tg_reprocess/hrcf*_pha2.fits)
     local evt2=$(ls "$datadir"/tg_reprocess/hrcf*_evt2.fits)

@@ -79,7 +79,7 @@ false && {
         source /usr/local/ciao/bin/ciao.sh -o ||
         source /soft/ciao/bin/ciao.sh -o
 
-    for obsid in $(source2obsids hz43)
+    for obsid in $(obsids)
     do
 	instruments $obsid | grep -qi hrc-s || continue
 	echo $obsid

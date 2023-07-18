@@ -12,100 +12,94 @@ tgreprocess=/data/legs/rpete/flight/dev/tg_reprocess
 # whether to force reprocessing if tg_reprocess outdir already exists
 force=1
 
-for src in $(sources)
+for o in $(obsids)
 do
-    for o in $(source2obsids $src)
-    do
 
-	#instruments "$o" | grep -qi hrc-s || continue
+    #instruments "$o" | grep -qi hrc-s || continue
 
-	outdir=tg_reprocess
-        logfile=data/$src/$o/tg_reprocess.log
-	outdirfull=data/$src/$o/$outdir
+    outdir=tg_reprocess
+    logfile=data/$o/tg_reprocess.log
+    outdirfull=data/$o/$outdir
 
-	[ -f $outdirfull/*_pha2.fits -a $force -eq 0 ] && continue
+    [ -f $outdirfull/*_pha2.fits -a $force -eq 0 ] && continue
 
-	orders=
-	badpix='--badpix CALDB'
+    orders=
+    badpix='--badpix CALDB'
 
-	instruments "$o" | grep -qi hrc-s && { orders='--orders 3'; }
+    instruments "$o" | grep -qi hrc-s && { orders='--orders 3'; }
 
-	perl $tgreprocess --nogrmf $orders $badpix --pifilter none --outdir $outdir data/$src/$o 2>&1 | tee $logfile
+    perl $tgreprocess --nogrmf $orders $badpix --pifilter none --outdir $outdir data/$o 2>&1 | tee $logfile
 
-        # expand the source and background regions for offaxis I observations
-        [ $o -eq 1516 -o $o -eq 1004 -o $o -eq 1005 -o \
-          $o -eq 2601 -o $o -eq 2603 -o $o -eq 18415 ] && {
+    # expand the source and background regions for offaxis I observations
+    [ $o -eq 1516 -o $o -eq 1004 -o $o -eq 1005 -o \
+         $o -eq 2601 -o $o -eq 2603 -o $o -eq 18415 ] && {
 
-            evt2=$(ls $outdirfull/hrcf*${o}N*_evt2.fits)
-            pha2=$(ls $outdirfull/hrcf*${o}N*_pha2.fits)
+        evt2=$(ls $outdirfull/hrcf*${o}N*_evt2.fits)
+        pha2=$(ls $outdirfull/hrcf*${o}N*_pha2.fits)
 
-            echo punlearn 'tgextract' | tee -a $logfile
-            punlearn 'tgextract'
+        echo punlearn 'tgextract' | tee -a $logfile
+        punlearn 'tgextract'
 
-            echo tgextract \
-                "infile=$evt2" \
-                "outfile=$pha2" \
-                outfile_type=pha_typeII \
-                tg_srcid_list=all \
-                tg_part_list=header_value \
-                tg_order_list=-1,1 \
-                ancrfile=none \
-                respfile=none \
-                min_tg_d=-0.007 \
-                max_tg_d=0.007 \
-                max_upbkg_tg_d=0.035 \
-                clobber=yes | tee -a $logfile
+        echo tgextract \
+             "infile=$evt2" \
+             "outfile=$pha2" \
+             outfile_type=pha_typeII \
+             tg_srcid_list=all \
+             tg_part_list=header_value \
+             tg_order_list=-1,1 \
+             ancrfile=none \
+             respfile=none \
+             min_tg_d=-0.007 \
+             max_tg_d=0.007 \
+             max_upbkg_tg_d=0.035 \
+             clobber=yes | tee -a $logfile
 
-            tgextract \
-                "infile=$evt2" \
-                "outfile=$pha2" \
-                outfile_type=pha_typeII \
-                tg_srcid_list=all \
-                tg_part_list=header_value \
-                tg_order_list=-1,1 \
-                ancrfile=none \
-                respfile=none \
-                min_tg_d=-0.007 \
-                max_tg_d=0.007 \
-                max_upbkg_tg_d=0.035 \
-                clobber=yes 2>&1 | tee -a $logfile
-        }
+        tgextract \
+            "infile=$evt2" \
+            "outfile=$pha2" \
+            outfile_type=pha_typeII \
+            tg_srcid_list=all \
+            tg_part_list=header_value \
+            tg_order_list=-1,1 \
+            ancrfile=none \
+            respfile=none \
+            min_tg_d=-0.007 \
+            max_tg_d=0.007 \
+            max_upbkg_tg_d=0.035 \
+            clobber=yes 2>&1 | tee -a $logfile
+    }
 
 
-	instruments "$o" | grep -qi hrc-s && {
-	    outdir=tg_reprocess_pifilter
-            logfile=data/$src/$o/tg_reprocess_pifilter.log
-	    outdirfull=data/$src/$o/$outdir
-	    dtf1=$(ls data/$src/$o/primary/*dtf1.fits*)
+    instruments "$o" | grep -qi hrc-s && {
+	outdir=tg_reprocess_pifilter
+        logfile=data/$o/tg_reprocess_pifilter.log
+	outdirfull=data/$o/$outdir
+	dtf1=$(ls data/$o/primary/*dtf1.fits*)
 
-	    gainfile=/data/legs/rpete/flight/xcal_hrcsi/caldb_test/hrcsD1999-09-04t_gmapN9996.fits.gz
-	    date_obs=$(dmkeypar $dtf1 date-obs ec+) 
+	gainfile=/data/legs/rpete/flight/hz43/caldb_test/hrcsD1999-09-04t_gmapN9996.fits.gz
+	date_obs=$(dmkeypar $dtf1 date-obs ec+) 
 
-	    [ "$date_obs" \> 2012-03-17 ] && gainfile=/data/legs/rpete/flight/xcal_hrcsi/caldb_test/hrcsD2012-03-18t_gmapN9996.fits.gz
+	[ "$date_obs" \> 2012-03-17 ] && gainfile=/data/legs/rpete/flight/hz43/caldb_test/hrcsD2012-03-18t_gmapN9996.fits.gz
 
-	    [ -f $outdirfull/*_pha2.fits -a $force -eq 0 ] ||
-		perl $tgreprocess --gainfile $gainfile --pifilter pi --nogrmf $orders $badpix --outdir $outdir data/$src/$o 2>&1 | tee $logfile
+	[ -f $outdirfull/*_pha2.fits -a $force -eq 0 ] ||
+	    perl $tgreprocess --gainfile $gainfile --pifilter pi --nogrmf $orders $badpix --outdir $outdir data/$o 2>&1 | tee $logfile
 
-	}
-	rm -f data/$src/$o/$outdir/*_evt1{a,}.fits
-
-    done
+    }
+    rm -f data/$o/$outdir/*_evt1{a,}.fits
 done
 
 # after this is done, scan images to make sure they are all on-axis
 false && {
-    for src in $(sources)
+    for o in $(obsids)
     do
-	for o in $(source2obsids "$src")
-	do
-	    f=$(ls data/"$src"/"$o"/tg_reprocess/*_evt2.fits)
-	    echo "$f"
-	    ds9 "$f" -bin factor 32 -scale mode 99.5 -cmap heat -scale sqrt
-	done
+	f=$(ls data/"$o"/tg_reprocess/*_evt2.fits)
+	echo "$f"
+	ds9 "$f" -bin factor 32 -scale mode 99.5 -cmap heat -scale sqrt
     done
+
 }
 
 # to see which HRC-I observations were off-axis...so far they are 1516, 1004, 1005, 2601, 2603, 18415
-#obsids=`grep -i hrc-i obsids_hz43 | cut -f 1`
-#for o in $obsids; do echo $o; ds9 -cmap Heat -zoom to fit -scale log -scale mode 99.5 data/hz43/$o/tg_reprocess/*_evt2.fits -bin factor 32 32; done
+#obsids=`grep -i hrc-i obsids | cut -f 1`
+#for o in $obsids; do echo $o; ds9 -cmap Heat -zoom to fit -scale log -scale mode 99.5 data/$o/tg_reprocess/*_evt2.fits -bin factor 32 32; done
 

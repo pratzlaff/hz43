@@ -23,11 +23,11 @@ sqedir=/data/legs/rpete/flight/hrcs_qe/$sqever/qe
 sqeuver=15
 sqeudir=/data/legs/rpete/flight/hrcs_qeu/ARD/v${sqeuver}/qeu
 
-for o in $(source2obsids hz43)
+for o in $(obsids)
 do
 
     instruments $o | grep -qi hrc-s || continue
-    obsfile=$(ls ./data/hz43/$o/tg_reprocess/hrcf*_pha2.fits)
+    obsfile=$(ls ./data/$o/tg_reprocess/hrcf*_pha2.fits)
 
     sqefile=$(match_caldb_file "$obsfile" qe "$sqedir" "$sqever")
     pset ardlib AXAF_HRC-S1_QE_FILE="$sqefile"'[AXAF_QE1]'
