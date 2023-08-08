@@ -32,7 +32,7 @@ declare -A iqe sqeu
 # HRC-I QE directories
 iqe=(
   #[N0015]=/data/legs/rpete/flight/hrci_qe/N0015/qe
-  #[caldb]=$CALDB/data/chandra/hrc/qe
+  [caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j
 isuffix=''
@@ -41,7 +41,7 @@ isuffix=''
 sqeu=(
   #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
   #[N0017]=/data/legs/rpete/flight/qeu/ARD/v17/qeu
-  #[caldb]=$CALDB/data/chandra/hrc/qeu
+  [caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
 for o in $obsids
@@ -56,7 +56,7 @@ do
       outdir=./arfs/I_qe_"${v}${isuffix}"
       qedir=${iqe["$v"]}
       [ $v == caldb ] && {
-	outdir=./arfs/caldb
+	outdir=./arfs/caldb/i
 	qefile=$(match_caldb_file "$pha2" qe "${qedir}${isuffix}")
       } ||
       {
@@ -73,7 +73,7 @@ do
       outdir=./arfs/S_qeu_"$v"
       qeudir=${sqeu["$v"]}
       [ $v == caldb ] && {
-	outdir=./arfs/caldb
+	outdir=./arfs/caldb/s
         qeufile=$(match_caldb_file "$pha2" qeu "$qeudir")
       } ||
       {
