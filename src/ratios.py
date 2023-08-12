@@ -5,6 +5,8 @@ import astropy.io.fits
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import re
+import sys
 
 import response
 import util
@@ -16,6 +18,49 @@ useflux=False
 maxorder=None
 fig=None
 pdf=None
+corrected=None
+
+# unconcered about leap years
+
+def ymd2datestr(y, m, d):
+    return f'{y:04d}-{m:02d}-{d:02d}'
+
+def ymd2frac(y, m, d):
+    y = int(y)
+    m = int(m)
+    d = float(d)
+    return y + (md2dn(m, d)-1)/365
+
+def md2dn(m, d):
+    m = int(m)
+    d = float(d)
+    if ( m <= 2 ):
+        return (m-1)*31+d
+    else:
+        return int((m+1)*30.6)-63+d
+
+def dn2md(dn):
+    sum = 0
+    month_days = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    for i in range(len(month_days)):
+        sum += month_days[i]
+        if sum >= dn:
+            return i+1, dn-(sum-month_days[i])
+    raise ValueError(f'{dn}: {sum}')
+
+
+def frac2ymd(frac):
+    y = int(frac)
+    dn = int(365*(frac-y))+1
+    m, d = dn2md(dn)
+    return y, m, d
+
+def datestr2ymd(datestr):
+    m = re.match('(\d{4})-(\d{2})-(\d{2})', datestr)
+    year = int(m.group(1))
+    month = int(m.group(2))
+    day = float(m.group(3))
+    return year, month, day
 
 def wav_ranges():
 
@@ -56,12 +101,12 @@ def dispersed_flux(src, bg, resp, bin_lo, bin_hi, wav_lo, wav_hi, hdr, predicted
     return rate, rate_err, flux_, flux_err, ratio, ratio_err
 
 # get HRC-S/LETG counts light curves for dispersed orders
-def dispersed_lc(tg_reprocess='tg_reprocess'):
+def dispersed_lc(tg_reprocess, exclude):
     global maxorder
 
     orders = { 'neg':-1, 'pos':+1 }
 
-    obsids, years = hz43.obsids_years('HRC-S')
+    obsids, years = hz43.obsids_years('HRC-S', exclude=exclude)
     w1, w2 = wav_ranges()
 
     model_flux = None
@@ -123,17 +168,20 @@ def dispersed_lc(tg_reprocess='tg_reprocess'):
     return obsids, years, date_str, w1, w2, rates, rate_errs, fluxes, flux_errs, ratios, ratio_errs
 
 # get HRC-S/LETG counts light curves for zeroth order
-def zeroth_lc(detector, tg_reprocess='tg_reprocess'):
+def zeroth_lc(detector, tg_reprocess, exclude):
     if (detector == 'HRC-S'):
-        obsids, years = hz43.obsids_years('HRC-S')
+        obsids, years = hz43.obsids_years('HRC-S', exclude=exclude)
     elif (detector == 'HRC-I'):
-        obsids, years = hz43.obsids_years('HRC-I')
+        obsids, years = hz43.obsids_years('HRC-I', exclude=exclude)
     else:
         raise ValueError(det)
 
     rates, rate_errs = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
     model_rates = hz43.predicted_rates(obsids)
-    return years, rates, rate_errs, model_rates, rates/model_rates, rate_errs/model_rates
+    date_obs = []
+    for i in range(len(obsids)):
+        date_obs.append(util.read_header(util.pha2_file(obsids[i], tg_reprocess=tg_reprocess))['date-obs'][0:10])
+    return obsids, years, date_obs, rates, rate_errs, model_rates, rates/model_rates, rate_errs/model_rates
 
 def plot_zero(d, label=None, relative=True):
     x = d['year']
@@ -178,7 +226,7 @@ def write_residuals(lc, resdir):
             ratio_err = lc['ratio_err'][order][1:,i]
             np.savetxt(filename, np.transpose([wav, ratio, ratio_err]), fmt=['%.1f', '%.5f', '%.5f'], delimiter="\t", header="lambda\tflux_ratio\tflux_ratio_err")
 
-def plot_disp_wavdep_ratios(args, lc_disp):
+def plot_disp_wavdep_ratios(lc_disp, args):
     global fig, pdf
     fmt = { 'pos' : 'k-', 'neg' : 'r-' }
     plot_dims = (2, 3)
@@ -190,9 +238,9 @@ def plot_disp_wavdep_ratios(args, lc_disp):
         for order in lc_disp['bin_lo']:
             wav = 0.5*(lc_disp['bin_lo'][order][1:] + lc_disp['bin_hi'][order][1:])
             ratio = lc_disp['ratio'][order][1:][:,i]
-            ratio_err = lc_disp['rate_err'][order][1:][:,i]
+            ratio_err = lc_disp['ratio_err'][order][1:][:,i]
             plt.errorbar(wav, ratio, ratio_err, fmt=fmt[order])
-            plt.title(f"{lc_disp['obsid'][i]} - {lc_disp['date'][i]}")
+            plt.title(f"{lc_disp['obsid'][i]} - {lc_disp['date-obs'][i]}")
 
         if (row==plot_dims[0]-1) or (i>=lc_disp['year'].size-plot_dims[1]):
             plt.xlabel(f'{symbols.LAMBDA} ({symbols.ANGSTROM})')
@@ -211,15 +259,214 @@ def plot_disp_wavdep_ratios(args, lc_disp):
                 plt.show()
             plt.clf()
 
-def lc_0(detnam, tg_reprocess):
+def collect_data(lc_0, lc_disp):
+    d = {
+        'obsid' : lc_0['obsid'],
+        'year' : lc_0['year'],
+        'date-obs' : lc_0['date-obs'],
+        'r_0' : lc_0['ratio'],
+        'rerr_0' : lc_0['ratio_err'],
+        'r_pos' : lc_disp['ratio']['pos'][0],
+        'rerr_pos' : lc_disp['ratio_err']['pos'][0],
+        'r_neg' : lc_disp['ratio']['neg'][0],
+        'rerr_neg' : lc_disp['ratio_err']['neg'][0],
+    }
+    return d
+
+# get HRC-S QEU file specifications
+def qeu_params(lc_0, lc_disp, args):
+
+    # return values will be
+    # ---------------------
+    # cvsd - self-explanatory
+    # r0 - ratio of observed to predicted for zeroth order
+    # rpos - ratio of observed to predicted for positive orders
+    # rneg - ratio of observed to predicted for negative orders
+    # obsid - obsid whose residual ratios are to be used for wavelength-dependent corrections
+
+    cvsd = ['1997-07-22']
+    for i in range(10):
+        cvsd.append(f'{2000+i:04d}-01-01')
+    obsid = [None] * len(cvsd)
+    cvsd_year = [ymd2frac(*datestr2ymd(d)) for d in cvsd]
+
+    d = collect_data(lc_0, lc_disp)
+    ind = np.where(d['year'] > 2010)[0]
+
+    hv_1_date = ymd2frac(2012, 3, 29)
+    hv_2_date = ymd2frac(2021, 5, 14)
+    hv_changes = {14422 : '2012-03-29',
+                 24575 : '2021-05-14',
+                 }
+    for i in ind:
+        cvsd_year.append(0.5*(d['year'][i]+d['year'][i-1]))
+        cvsd.append(ymd2datestr(*frac2ymd(cvsd_year[-1])))
+
+        o = d['obsid'][i]
+        obsid.append(o)
+        if o in hv_changes:
+            cvsd[-1] = hv_changes[o]
+            cvsd_year[-1] = ymd2frac(*datestr2ymd(cvsd[-1]))
+
+    # these are the dates of the middle of the time period each file
+    # will cover
+    cvsd_year = np.array(cvsd_year)
+    year_eff = np.copy(cvsd_year)
+    year_eff[:-1] = 0.5 * (cvsd_year[1:] + cvsd_year[:-1])
+
+    r0 = np.zeros(len(cvsd))
+    rpos = r0.copy()
+    rneg = r0.copy()
+
+    # fit ratios before first HV change
+    ind = np.where(d['year'] < hv_1_date)[0]
+    p_0 = np.polynomial.Polynomial.fit(d['year'][ind],
+                                        d['r_0'][ind],
+                                        1,
+                                        w=1/d['rerr_0'][ind]
+                                        )
+    p_pos = np.polynomial.Polynomial.fit(d['year'][ind],
+                                          d['r_pos'][ind],
+                                          1,
+                                          w=1/d['rerr_pos'][ind]
+                                        )
+    p_neg = np.polynomial.Polynomial.fit(d['year'][ind],
+                                          d['r_neg'][ind],
+                                          1,
+                                          w=1/d['rerr_neg'][ind]
+                                        )
+    ind = np.where(year_eff < hv_1_date)[0]
+    r0[ind] = p_0(year_eff[ind])
+    rpos[ind] = p_pos(year_eff[ind])
+    rneg[ind] = p_neg(year_eff[ind])
+
+    # fit ratios between first and second HV changes
+    ind = np.where((d['year'] > hv_1_date) & (d['year'] < hv_2_date))[0]
+    p_0 = np.polynomial.Polynomial.fit(d['year'][ind],
+                                        d['r_0'][ind],
+                                        1,
+                                        w=1/d['rerr_0'][ind]
+                                        )
+    p_pos = np.polynomial.Polynomial.fit(d['year'][ind],
+                                          d['r_pos'][ind],
+                                          1,
+                                          w=1/d['rerr_pos'][ind]
+                                        )
+    p_neg = np.polynomial.Polynomial.fit(d['year'][ind],
+                                          d['r_neg'][ind],
+                                          1,
+                                          w=1/d['rerr_neg'][ind]
+                                        )
+    ind = np.where((year_eff > hv_1_date) & (year_eff < hv_2_date))[0]
+    r0[ind] = p_0(year_eff[ind])
+    rpos[ind] = p_pos(year_eff[ind])
+    rneg[ind] = p_neg(year_eff[ind])
+
+    # just duplicate observed ratios after 2nd HV change
+    ind = np.where(year_eff > hv_2_date)[0]
+    in_n = d['obsid'].size
+    out_n = len(cvsd)
+    for i in ind:
+        j = -(out_n-i)
+        if obsid[i] != d['obsid'][j]:
+            raise ValueError(f'{i}\t\{j}\t{in_n}\t{out_n}\t{obsid[i]}\t{d["obsid"][j]}')
+        r0[i] = d['r_0'][j]
+        rpos[i] = d['r_pos'][j]
+        rneg[i] = d['r_neg'][j]
+
+    print('\t'.join(('obsid', 'cvsd', 'year_eff', 'r0', 'rpos', 'rneg')))
+    print('\t'.join(('S',)*2+('N',)*4))
+    for i in range(len(cvsd)):
+        print('\t'.join((str(obsid[i]), cvsd[i], f'{year_eff[i]:.5f}', f'{r0[i]:.3f}', f'{rpos[i]:.3f}', f'{rneg[i]:.3f}')))
+
+    return cvsd, obsid, r0, rpos, rneg
+
+def write_disp_ratios(lc_0, lc_disp):
+    d = collect_data(lc_0, lc_disp)
+    for i in range(len(lc_0['obsid'])):
+        year, month, day = frac2ymd(d['year'][i])
+        ymd = f'{year:04d}-{month:02d}-{day:02d}'
+        sys.stderr.write('\t'.join((
+            str(d['obsid'][i]),
+            d['date-obs'][i],
+            str(d['year'][i]),
+            ymd,
+            f'{d["r_0"][i]:.3f}',
+            f'{d["rerr_0"][i]:.4f}',
+            f'{d["r_pos"][i]:.3f}',
+            f'{d["rerr_pos"][i]:.4f}',
+            f'{d["r_neg"][i]:.3f}',
+            f'{d["rerr_neg"][i]:.4f}',
+        )) + '\n')
+
+def lc_0(detnam, tg_reprocess, exclude):
     lc_0 = {}
-    lc_0.update(zip(('year', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess)))
+    lc_0.update(zip(('obsid', 'year', 'date-obs', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess, exclude)))
     return lc_0
 
-def lc_disp(tg_reprocess):
+def lc_disp(tg_reprocess, exclude):
     lc_disp = {}
-    lc_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess=tg_reprocess)))
+    lc_disp.update(zip(('obsid', 'year', 'date-obs', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess, exclude)))
     return lc_disp
+
+
+def select_file_index(cvsd, cvsds):
+    for i in range(len(cvsds)):
+        if cvsds[i] > cvsd:
+            return i-1
+    return i
+
+def qeu_correct(lc_0, lc_disp, args):
+    # special cases of HV changes
+    hv0 = (14324, 14396, 14397) # taken 2012-07-04
+    hv1 = ( 14238, )             # taken 2012-03-18
+
+    cvsd, obsid, r0, rpos, rneg = qeu_params(lc_0, lc_disp, args)
+    for i in range(len(lc_0['obsid'])):
+        date_obs = lc_0['date-obs'][i]
+        obsid = lc_0['obsid'][i]
+
+        if obsid in hv0:
+            date_obs='2012-03-16'
+        if obsid in hv1:
+            date_obs='2012-03-30'
+        if obsid==62635:
+            date_obs='2021-05-15'
+
+        j = select_file_index(lc_0['date-obs'][i], cvsd)
+
+        lc_0['ratio'][i] /= r0[j]
+        lc_0['ratio_err'][i] /= r0[j]
+
+        lc_disp['ratio']['pos'][:,i] /= rpos[j]
+        lc_disp['ratio_err']['pos'][:,i] /= rpos[j]
+
+        lc_disp['ratio']['neg'][:,i] /= rneg[j]
+        lc_disp['ratio_err']['neg'][:,i] /= rneg[j]
+
+def mkplots(i_0, s_0, disp, args):
+    global fig, pdf, corrected, useflux
+
+    if useflux:
+        ylabel = 'Flux / Predicted'
+    else:
+        ylabel = 'Rate / Predicted'
+    if not args.noi:
+        plot_zero(i_0, label='HRC-I: 0th')
+    if not args.nos:
+        plot_zero(s_0, label=r'HRC-S: 0th')
+        for order in disp['rate']:
+            plot_dispersed(disp, order, 0)
+    plt.title('HZ 43: HRC/LETG Ratios to Predicted')
+    plt.ylabel(ylabel)
+    plt.xlabel('Year')
+    plt.legend()
+    plt.tight_layout()
+    if args.pdf:
+        pdf.savefig(fig)
+    else:
+        plt.show()
+    plt.clf()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -234,6 +481,8 @@ def main():
     parser.add_argument('--noi', help='Do not plot I curves.', action='store_true')
     parser.add_argument('--nos', help='Do not plot S curves.', action='store_true')
     parser.add_argument('-m', '--maxorder', help='Maximum ARF/RMF order to read.', default=3, type=int)
+    #parser.add_argument('-e','--exclude', nargs='*', type=int, default=[24958,62635,25615], help='Exclude obsids')
+    parser.add_argument('-e','--exclude', nargs='*', type=int, help='Exclude obsids')
 
     args = parser.parse_args()
 
@@ -242,12 +491,16 @@ def main():
     useflux = args.flux
     maxorder = args.maxorder
 
+    hrci_lc_0 = None
+    hrcs_lc_0 = None
+    hrcs_lc_disp = None
+
     if not args.noi:
-        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci)
+        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci, args.exclude)
 
     if not args.nos:
-        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs)
-        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs)
+        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs, args.exclude)
+        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs, args.exclude)
 
     figsize = (11, 8.5)
 
@@ -256,43 +509,27 @@ def main():
         pdf = PdfPages(args.pdf)
         fig = plt.figure(figsize = figsize)
 
-    #
-    # plot ratio light curves, [rate|flux] / model, for 0th order and outer plates
-    #
-    if useflux:
-        ylabel = 'Flux / Predicted'
-    else:
-        ylabel = 'Rate / Predicted'
-    if not args.noi:
-        plot_zero(hrci_lc_0, label='HRC-I: 0th')
-    if not args.nos:
-        plot_zero(hrcs_lc_0, label=r'HRC-S: 0th')
-        for order in hrcs_lc_disp['rate']:
-            plot_dispersed(hrcs_lc_disp, order, 0)
-    plt.title('HZ 43: HRC/LETG Ratios to Predicted')
-    plt.ylabel(ylabel)
-    plt.xlabel('Year')
-    plt.legend()
-    plt.tight_layout()
-    if args.pdf:
-        pdf.savefig(fig)
-    else:
-        plt.show()
-    plt.clf()
+    mkplots(hrci_lc_0, hrcs_lc_0, hrcs_lc_disp, args)
 
     if args.nos:
         if args.pdf:
             pdf.close()
         sys.exit()
 
-    if not args.nos:
-        plot_disp_wavdep_ratios(args, hrcs_lc_disp)
+    plot_disp_wavdep_ratios(hrcs_lc_disp, args)
+    write_disp_ratios(hrcs_lc_0, hrcs_lc_disp)
 
-    if args.pdf:
-        pdf.close()
+    if args.corrected:
+        qeu_correct(hrcs_lc_0, hrcs_lc_disp, args)
+        mkplots(hrci_lc_0, hrcs_lc_0, hrcs_lc_disp, args)
+        plot_disp_wavdep_ratios(hrcs_lc_disp, args)
+        write_disp_ratios(hrcs_lc_0, hrcs_lc_disp)
 
     if args.resdir:
         write_residuals(hrcs_lc_disp, args.resdir)
+
+    if args.pdf:
+        pdf.close()
 
     sys.exit()
 
