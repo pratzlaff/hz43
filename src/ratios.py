@@ -284,7 +284,7 @@ def qeu_params(lc_0, lc_disp, args):
     # rneg - ratio of observed to predicted for negative orders
     # obsid - obsid whose residual ratios are to be used for wavelength-dependent corrections
 
-    cvsd = ['1997-07-22']
+    cvsd = ['1999-07-22']
     for i in range(10):
         cvsd.append(f'{2000+i:04d}-01-01')
     obsid = [None] * len(cvsd)
@@ -335,6 +335,9 @@ def qeu_params(lc_0, lc_disp, args):
                                           1,
                                           w=1/d['rerr_neg'][ind]
                                         )
+    sys.stderr.write('p_0: '+np.array2string(p_0.convert().coef) + '\n')
+    sys.stderr.write('p_pos: '+np.array2string(p_pos.convert().coef) + '\n')
+    sys.stderr.write('p_neg: '+np.array2string(p_neg.convert().coef) + '\n')
     ind = np.where(year_eff < hv_1_date)[0]
     r0[ind] = p_0(year_eff[ind])
     rpos[ind] = p_pos(year_eff[ind])
@@ -357,6 +360,9 @@ def qeu_params(lc_0, lc_disp, args):
                                           1,
                                           w=1/d['rerr_neg'][ind]
                                         )
+    sys.stderr.write('p_0: '+np.array2string(p_0.convert().coef) + '\n')
+    sys.stderr.write('p_pos: '+np.array2string(p_pos.convert().coef) + '\n')
+    sys.stderr.write('p_neg: '+np.array2string(p_neg.convert().coef) + '\n')
     ind = np.where((year_eff > hv_1_date) & (year_eff < hv_2_date))[0]
     r0[ind] = p_0(year_eff[ind])
     rpos[ind] = p_pos(year_eff[ind])
