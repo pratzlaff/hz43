@@ -183,10 +183,14 @@ def zeroth_lc(detector, tg_reprocess, exclude):
         date_obs.append(util.read_header(util.pha2_file(obsids[i], tg_reprocess=tg_reprocess))['date-obs'][0:10])
     return obsids, years, date_obs, rates, rate_errs, model_rates, rates/model_rates, rate_errs/model_rates
 
-def plot_zero(d, label=None, relative=True):
+def plot_zero(d, args, label=None, relative=True):
     x = d['year']
-    y = d['ratio']
-    yerr = d['ratio_err']
+    if args.absolute:
+        y = d['rate']
+        yerr = d['rate_err']
+    else:
+        y = d['ratio']
+        yerr = d['ratio_err']
     plt.errorbar(x, y, yerr, label=label)
 
 def plot_dispersed(d, order, index, color=None):
@@ -458,9 +462,9 @@ def mkplots(i_0, s_0, disp, args):
     else:
         ylabel = 'Rate / Predicted'
     if not args.noi:
-        plot_zero(i_0, label='HRC-I: 0th')
+        plot_zero(i_0, args, label='HRC-I: 0th')
     if not args.nos:
-        plot_zero(s_0, label=r'HRC-S: 0th')
+        plot_zero(s_0, args, label=r'HRC-S: 0th')
         for order in disp['rate']:
             plot_dispersed(disp, order, 0)
     plt.title('HZ 43: HRC/LETG Ratios to Predicted')
@@ -486,6 +490,7 @@ def main():
     parser.add_argument('-c', '--corrected', help='Plot corrected ratio curves.', action='store_true')
     parser.add_argument('--noi', help='Do not plot I curves.', action='store_true')
     parser.add_argument('--nos', help='Do not plot S curves.', action='store_true')
+    parser.add_argument('-a', '--absolute', help='Absolute rates.', action='store_true')
     parser.add_argument('-m', '--maxorder', help='Maximum ARF/RMF order to read.', default=3, type=int)
     #parser.add_argument('-e','--exclude', nargs='*', type=int, default=[24958,62635,25615], help='Exclude obsids')
     parser.add_argument('-e','--exclude', nargs='*', type=int, help='Exclude obsids')
