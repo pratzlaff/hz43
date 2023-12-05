@@ -6,7 +6,7 @@ obsids="$@"
 . ./src/functions.bash
 . /data/legs/rpete/flight/analysis_functions/util.bash
 obsids=$(obsids)
-obsids=$(grep '^[0-9]' obsids | grep -i hrc-i | cut -f1)
+obsids=$(grep '^[0-9]' obsids | grep -i hrc-s | cut -f1)
 screen -dmS arfs bash -c 'exec bash'
 n=6
 for i in {1..6}
@@ -40,8 +40,8 @@ isuffix=''
 # HRC-S QEU directories
 sqeu=(
   #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
-  [N0011pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v11
-  #[N0017]=/data/legs/rpete/flight/qeu/ARD/v17/qeu
+  #[N0011pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v11
+  [N0017]=/data/legs/rpete/flight/hrcs_qeu/ARD/v17/qeu
   #[caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
