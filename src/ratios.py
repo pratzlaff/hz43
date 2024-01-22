@@ -246,6 +246,11 @@ def plot_disp_wavdep_ratios(lc_disp, args):
             plt.errorbar(wav, ratio, ratio_err, fmt=fmt[order])
             plt.title(f"{lc_disp['obsid'][i]} - {lc_disp['date-obs'][i]}")
 
+        if args.ymin is not None:
+            plt.ylim(bottom=args.ymin)
+        if args.ymax is not None:
+            plt.ylim(top=args.ymax)
+
         if (row==plot_dims[0]-1) or (i>=lc_disp['year'].size-plot_dims[1]):
             plt.xlabel(f'{symbols.LAMBDA} ({symbols.ANGSTROM})')
         if col==0:
@@ -494,6 +499,8 @@ def main():
     parser.add_argument('-m', '--maxorder', help='Maximum ARF/RMF order to read.', default=3, type=int)
     #parser.add_argument('-e','--exclude', nargs='*', type=int, default=[24958,62635,25615], help='Exclude obsids')
     parser.add_argument('-e','--exclude', nargs='*', type=int, help='Exclude obsids')
+    parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
+    parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
 
     args = parser.parse_args()
 

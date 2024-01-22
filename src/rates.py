@@ -157,6 +157,11 @@ def plot_disp_wavdep(args, rates_disp):
             plt.errorbar(wav, y, yerr, fmt=fmt[order])
             plt.title(f"{rates_disp['obsid'][i]} - {rates_disp['date'][i]}")
 
+        if args.ymin is not None:
+            plt.ylim(bottom=args.ymin)
+        if args.ymax is not None:
+            plt.ylim(top=args.ymax)
+
         if (row==plot_dims[0]-1) or (i>=rates_disp['year'].size-plot_dims[1]):
             plt.xlabel(f'{symbols.LAMBDA} ({symbols.ANGSTROM})')
         if col==0:
@@ -184,6 +189,8 @@ def main():
     parser.add_argument('--noi', help='Do not plot I curves.', action='store_true')
     parser.add_argument('--nos', help='Do not plot S curves.', action='store_true')
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
+    parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
+    parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
 
     args = parser.parse_args()
 
