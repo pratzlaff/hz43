@@ -56,7 +56,7 @@ def frac2ymd(frac):
     return y, m, d
 
 def datestr2ymd(datestr):
-    m = re.match('(\d{4})-(\d{2})-(\d{2})', datestr)
+    m = re.match(r'(\d{4})-(\d{2})-(\d{2})', datestr)
     year = int(m.group(1))
     month = int(m.group(2))
     day = float(m.group(3))
@@ -384,7 +384,7 @@ def qeu_params(lc_0, lc_disp, args):
     for i in ind:
         j = -(out_n-i)
         if obsid[i] != d['obsid'][j]:
-            raise ValueError(f'{i}\t\{j}\t{in_n}\t{out_n}\t{obsid[i]}\t{d["obsid"][j]}')
+            raise ValueError(f'{i}\t{j}\t{in_n}\t{out_n}\t{obsid[i]}\t{d["obsid"][j]}')
         r0[i] = d['r_0'][j]
         rpos[i] = d['r_pos'][j]
         rneg[i] = d['r_neg'][j]

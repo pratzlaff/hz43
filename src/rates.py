@@ -103,6 +103,7 @@ def plot_0th(args, detector):
         yerr = ratio_err
         ylabel = 'Rate Ratio'
     plt.errorbar(year, y, yerr, label=f'{detector}: 0th')
+    plt.grid()
     plt.xlabel('Year')
     plt.ylabel(ylabel)
 
@@ -157,6 +158,7 @@ def plot_disp_wavdep(args, rates_disp):
             plt.errorbar(wav, y, yerr, fmt=fmt[order])
             plt.title(f"{rates_disp['obsid'][i]} - {rates_disp['date'][i]}")
 
+        plt.grid()
         if args.ymin is not None:
             plt.ylim(bottom=args.ymin)
         if args.ymax is not None:
