@@ -37,7 +37,7 @@ def wav_ranges():
     return w1, w2
 
 # get HRC-S/LETG rates for dispersed orders
-def dispersed_rates(tg_reprocess='tg_reprocess'):
+def dispersed_rates(tg_reprocess='tg_reprocess', merge=None):
     orders = { 'neg':-1, 'pos':+1 }
 
     obsids, years = hz43.obsids_years('HRC-S')
@@ -69,10 +69,49 @@ def dispersed_rates(tg_reprocess='tg_reprocess'):
                 ind2 = np.where((bin_lo>=w1[order][j]) & (bin_hi<w2[order][j]))
                 rates[order][j][i], rate_errs[order][j][i] = util.calc_rate(src[ind2].sum(), bg[ind2].sum(), h)
 
+    data = { obsids[i] : {'year':years[i],
+                          'date_str':date_str[i],
+                          'rate': { 'neg':rates['neg'][:,i],
+                                    'pos':rates['pos'][:,i],
+                                   },
+                          'rate_err': { 'neg':rate_errs['neg'][:,i],
+                                        'pos':rate_errs['pos'][:,i],
+                                   },
+                          } for i in range(len(obsids))
+            }
+
+    merge_disp_rates(data, merge)
+
+    obsids = list(data.keys())
+    years = np.array([ data[o]['year'] for o in obsids ])
+    date_str = [ data[o]['date_str'] for o in obsids ]
+    rates = { 'neg':np.stack([data[o]['rate']['neg'] for o in obsids]).transpose(),
+              'pos':np.stack([data[o]['rate']['pos'] for o in obsids]).transpose(),
+             }
+    rates = { order:np.stack([data[o]['rate'][order] for o in obsids]).transpose() for order in orders }
+    rate_errs = { order:np.stack([data[o]['rate_err'][order] for o in obsids]).transpose() for order in orders }
+
     return obsids, years, date_str, w1, w2, rates, rate_errs
 
+def merge_disp_rates(data, merge):
+    # each element is an array of obsids to merge
+    orders = ('neg', 'pos')
+    for a in merge:
+        try:
+            rates = { order:np.array([ data[o]['rate'][order] for o in a ]) for order in orders }
+            rate_errs = { order:np.array([ data[o]['rate_err'][order] for o in a ]) for order in orders }
+            w = { order:1/rate_errs[order]/rate_errs[order] for order in orders }
+            rate = { order:(rates[order] * w[order]).sum(axis=0) / w[order].sum(axis=0) for order in orders }
+            rate_err = { order:np.sqrt(1/w[order].sum(axis=0)) for order in orders }
+            data[a[-1]]['rate'] = rate
+            data[a[-1]]['rate_err'] = rate_err
+            for i in range(len(a)-1):
+                del data[a[i]]
+        except:
+            raise
+
 # get HRC rates for 0th order
-def zeroth_rates(detector, tg_reprocess='tg_reprocess'):
+def zeroth_rates(detector, tg_reprocess='tg_reprocess', merge=None):
     if (detector == 'HRC-S'):
         obsids, years = hz43.obsids_years('HRC-S')
     elif (detector == 'HRC-I'):
@@ -80,15 +119,45 @@ def zeroth_rates(detector, tg_reprocess='tg_reprocess'):
     else:
         raise ValueError(det)
 
-    rates, rate_errs = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
+    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
+
+    data = { obsids[i] : {'year':years[i],
+                          'rate':rates[i],
+                          'rate_err':rate_errs[i],
+                          } for i in range(len(obsids))
+            }
+
+    merge_zero_rates(data, merge)
+
+    years = np.array([ data[o]['year'] for o in data ])
+    rates = np.array([ data[o]['rate'] for o in data ])
+    rate_errs = np.array([ data[o]['rate_err'] for o in data ])
+
     return years, rates, rate_errs
+
+def merge_zero_rates(data, merge):
+
+    # each element is an array of obsids to merge
+    for a in merge:
+        try:
+            rates = np.array([data[o]['rate'] for o in a])
+            rate_errs = np.array([data[o]['rate_err'] for o in a])
+            w = 1 /rate_errs / rate_errs
+            rate = (rates * w).sum() / w.sum()
+            rate_err = np.sqrt(1/w.sum())
+            data[a[-1]]['rate'] = rate
+            data[a[-1]]['rate_err'] = rate_err
+            for i in range(len(a)-1):
+                del data[a[i]]
+        except:
+            pass
 
 def plot_0th(args, detector):
     tg_reprocess = { 'HRC-I' : args.tg_reprocess_hrci,
                      'HRC-S' : args.tg_reprocess_hrcs,
                     }.get(detector)
     rates_0 = {}
-    rates_0.update(zip(('year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess)))
+    rates_0.update(zip(('year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess, merge=args.merge)))
     year = rates_0['year']
     rate = rates_0['rate']
     rate_err = rates_0['rate_err']
@@ -193,7 +262,7 @@ def main():
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
-
+    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077]])
     args = parser.parse_args()
 
     if args.pdf:
@@ -208,7 +277,7 @@ def main():
     if not args.nos:
         plot_0th(args, 'HRC-S')
         s_disp = {}
-        s_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err'), dispersed_rates(tg_reprocess=args.tg_reprocess_hrcs)))
+        s_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err'), dispersed_rates(tg_reprocess=args.tg_reprocess_hrcs, merge=args.merge)))
         plot_disp(args, s_disp)
 
 

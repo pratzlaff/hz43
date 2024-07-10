@@ -90,18 +90,20 @@ def dispersed_flux(src, bg, resp, bin_lo, bin_hi, wav_lo, wav_hi, hdr, predicted
     ind = np.where((bin_lo>=wav_lo) & (bin_hi<wav_hi))
     rate, rate_err, flux_, flux_err = flux.flux_summed(src[ind], bg[ind], resp[ind], bin_lo[ind], bin_hi[ind], hdr, factor[ind])
 
-    ratio = rate / predicted[ind].sum()
-    ratio_err = rate_err / predicted[ind].sum()
+    predicted = predicted[ind].sum()
+
+    ratio = rate / predicted
+    ratio_err = rate_err / predicted
 
     global useflux
     if useflux:
-        ratio = flux_ / predicted[ind].sum()
-        ratio_err = flux_err / predicted[ind].sum()
+        ratio = flux_ / predicted
+        ratio_err = flux_err / predicted
 
     return rate, rate_err, flux_, flux_err, ratio, ratio_err
 
 # get HRC-S/LETG counts light curves for dispersed orders
-def dispersed_lc(tg_reprocess, exclude):
+def dispersed_lc(tg_reprocess, exclude, merge):
     global maxorder
 
     orders = { 'neg':-1, 'pos':+1 }
@@ -165,10 +167,76 @@ def dispersed_lc(tg_reprocess, exclude):
                 ratios[order][j][i] = ra
                 ratio_errs[order][j][i] = raerr
 
+    if merge is not None:
+        data = { obsids[i] : {'year':years[i],
+                              'date_str':date_str[i],
+                              'rate': { o:rates[o][:,i] for o in orders },
+                              'rate_err': { o:rate_errs[o][:,i] for o in orders },
+                              'flux': { o:fluxes[o][:,i] for o in orders },
+                              'flux_err': { o:flux_errs[o][:,i] for o in orders },
+                              'ratio': { o:ratios[o][:,i] for o in orders },
+                              'ratio_err': { o:ratio_errs[o][:,i] for o in orders },
+                              } for i in range(len(obsids))
+                }
+
+        merge_disp_rates(data, merge)
+
+        obsids = list(data.keys())
+        years = np.array([ data[o]['year'] for o in obsids ])
+        date_str = [ data[o]['date_str'] for o in obsids ]
+        rates = { order:np.stack([data[o]['rate'][order] for o in obsids]).transpose() for order in orders }
+        rate_errs = { order:np.stack([data[o]['rate_err'][order] for o in obsids]).transpose() for order in orders }
+        fluxes = { order:np.stack([data[o]['flux'][order] for o in obsids]).transpose() for order in orders }
+        flux_errs = { order:np.stack([data[o]['flux_err'][order] for o in obsids]).transpose() for order in orders }
+        ratios = { order:np.stack([data[o]['ratio'][order] for o in obsids]).transpose() for order in orders }
+        ratio_errs = { order:np.stack([data[o]['ratio_err'][order] for o in obsids]).transpose() for order in orders }
+
+    print(obsids, years, date_str)
+    print(rates, rate_errs)
+    print(fluxes, flux_errs)
+    print(ratios, ratio_errs)
     return obsids, years, date_str, w1, w2, rates, rate_errs, fluxes, flux_errs, ratios, ratio_errs
 
+def merge_disp_rates(data, merge):
+    orders = ('neg', 'pos')
+    for a in merge:
+        try:
+
+            rates = { order:np.array([ data[o]['rate'][order] for o in a ]) for order in orders }
+            rate_errs = { order:np.array([ data[o]['rate_err'][order] for o in a ]) for order in orders }
+            w = { order:1/rate_errs[order]/rate_errs[order] for order in orders }
+            rate = { order:(rates[order] * w[order]).sum(axis=0) / w[order].sum(axis=0) for order in orders }
+            rate_err = { order:np.sqrt(1/w[order].sum(axis=0)) for order in orders }
+
+            fluxes = { order:np.array([ data[o]['flux'][order] for o in a ]) for order in orders }
+            flux_errs = { order:np.array([ data[o]['flux_err'][order] for o in a ]) for order in orders }
+            w = { order:1/flux_errs[order]/flux_errs[order] for order in orders }
+            flux = { order:(fluxes[order] * w[order]).sum(axis=0) / w[order].sum(axis=0) for order in orders }
+            flux_err = { order:np.sqrt(1/w[order].sum(axis=0)) for order in orders }
+
+            # FIXME: is this valid for the ratios?
+            ratios = { order:np.array([ data[o]['ratio'][order] for o in a ]) for order in orders }
+            ratio_errs = { order:np.array([ data[o]['ratio_err'][order] for o in a ]) for order in orders }
+            w = { order:1/ratio_errs[order]/ratio_errs[order] for order in orders }
+            ratio = { order:(ratios[order] * w[order]).sum(axis=0) / w[order].sum(axis=0) for order in orders }
+            ratio_err = { order:np.sqrt(1/w[order].sum(axis=0)) for order in orders }
+
+            data[a[-1]]['rate'] = rate
+            data[a[-1]]['rate_err'] = rate_err
+
+            data[a[-1]]['flux'] = flux
+            data[a[-1]]['flux_err'] = flux_err
+
+            data[a[-1]]['ratio'] = ratio
+            data[a[-1]]['ratio_err'] = ratio_err
+
+            for i in range(len(a)-1):
+                del data[a[i]]
+        except:
+            raise
+
 # get HRC-S/LETG counts light curves for zeroth order
-def zeroth_lc(detector, tg_reprocess, exclude):
+def zeroth_lc(detector, tg_reprocess, exclude, merge):
     if (detector == 'HRC-S'):
         obsids, years = hz43.obsids_years('HRC-S', exclude=exclude)
     elif (detector == 'HRC-I'):
@@ -176,12 +244,57 @@ def zeroth_lc(detector, tg_reprocess, exclude):
     else:
         raise ValueError(det)
 
-    rates, rate_errs = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
+    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
     model_rates = hz43.predicted_rates(obsids)
+
+    if merge is not None:
+        data = { obsids[i] : {'year':years[i],
+                              'rate':rates[i],
+                              'rate_err':rate_errs[i],
+                              'exposure':exposures[i],
+                              'model_rate':model_rates[i],
+                              } for i in range(len(obsids))
+                }
+
+        merge_zero_rates(data, merge)
+
+        obsids = list(data.keys())
+        years = np.array([ data[o]['year'] for o in data ])
+        rates = np.array([ data[o]['rate'] for o in data ])
+        rate_errs = np.array([ data[o]['rate_err'] for o in data ])
+        model_rates = np.array([ data[o]['model_rate'] for o in data ])
+        exposures = np.array([ data[o]['exposure'] for o in data ])
+
     date_obs = []
     for i in range(len(obsids)):
         date_obs.append(util.read_header(util.pha2_file(obsids[i], tg_reprocess=tg_reprocess))['date-obs'][0:10])
+
     return obsids, years, date_obs, rates, rate_errs, model_rates, rates/model_rates, rate_errs/model_rates
+
+def merge_zero_rates(data, merge):
+
+    # each element is an array of obsids to merge
+    for a in merge:
+        try:
+            rates = np.array([data[o]['rate'] for o in a])
+            rate_errs = np.array([data[o]['rate_err'] for o in a])
+            rate_errs = np.array([data[o]['rate_err'] for o in a])
+            model_rates = np.array([data[o]['model_rate'] for o in a])
+            exposures = np.array([data[o]['exposure'] for o in a])
+            w = 1 /rate_errs / rate_errs
+            rate = (rates * w).sum() / w.sum()
+            rate_err = np.sqrt(1/w.sum())
+
+            model_rate = (model_rates*exposures).sum() / exposures.sum()
+
+            data[a[-1]]['rate'] = rate
+            data[a[-1]]['rate_err'] = rate_err
+            data[a[-1]]['model_rate'] = model_rate
+
+            for i in range(len(a)-1):
+                del data[a[i]]
+        except:
+            pass
 
 def plot_zero(d, args, label=None, relative=True):
     x = d['year']
@@ -414,14 +527,14 @@ def write_disp_ratios(lc_0, lc_disp):
             f'{d["rerr_neg"][i]:.4f}',
         )) + '\n')
 
-def lc_0(detnam, tg_reprocess, exclude):
+def lc_0(detnam, tg_reprocess, exclude, merge):
     lc_0 = {}
-    lc_0.update(zip(('obsid', 'year', 'date-obs', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess, exclude)))
+    lc_0.update(zip(('obsid', 'year', 'date-obs', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess, exclude, merge)))
     return lc_0
 
-def lc_disp(tg_reprocess, exclude):
+def lc_disp(tg_reprocess, exclude, merge):
     lc_disp = {}
-    lc_disp.update(zip(('obsid', 'year', 'date-obs', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess, exclude)))
+    lc_disp.update(zip(('obsid', 'year', 'date-obs', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess, exclude, merge)))
     return lc_disp
 
 
@@ -501,6 +614,7 @@ def main():
     parser.add_argument('-e','--exclude', nargs='*', type=int, help='Exclude obsids')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
+    parser.add_argument('--merge', action='append', nargs='+', type=int)
 
     args = parser.parse_args()
 
@@ -514,11 +628,11 @@ def main():
     hrcs_lc_disp = None
 
     if not args.noi:
-        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci, args.exclude)
+        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci, args.exclude, args.merge)
 
     if not args.nos:
-        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs, args.exclude)
-        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs, args.exclude)
+        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs, args.exclude, args.merge)
+        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs, args.exclude, args.merge)
 
     figsize = (11, 8.5)
 
