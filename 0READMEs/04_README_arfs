@@ -2,20 +2,22 @@
 
 obsids="$@"
 
-<<'COMMENT'
-. ./src/functions.bash
-. /data/legs/rpete/flight/analysis_functions/util.bash
-obsids=$(obsids)
-obsids=$(grep '^[0-9]' obsids | grep -i hrc-s | cut -f1)
-screen -dmS arfs bash -c 'exec bash'
-n=6
-for i in {1..6}
-do
-  o=$(i_of_n $i $n $obsids)
-  screen -S arfs -X screen bash -c "time /bin/bash 0READMEs/04_README_arfs $o; exec bash"
-done
-screen -rS arfs
-COMMENT
+mkarfs() {
+    n=32
+    [ $# -eq 1 ] && n=$1
+    . ./src/functions.bash
+    . /data/legs/rpete/flight/analysis_functions/util.bash
+    obsids=$(obsids)
+    #obsids=$(grep '^[0-9]' obsids | grep -i hrc-i | cut -f1)
+    screen -dmS arfs
+    eval "for i in {1..$n}"'
+    do
+        o=$(i_of_n $i '"$n"' $obsids)
+        screen -S arfs -X screen bash -c "time ./0READMEs/04_README_arfs $o; #exec bash"
+    done'
+    screen -S arfs -p0 -X kill
+    screen -rS arfs
+}
 
 . /data/legs/rpete/flight/analysis_functions/arfs.bash
 . src/functions.bash
@@ -31,7 +33,8 @@ declare -A iqe sqeu
 
 # HRC-I QE directories
 iqe=(
-  [N0014]=/data/legs/rpete/flight/hrci_qe/N0014/qe
+  #[N0014]=/data/legs/rpete/flight/hrci_qe/N0014/qe
+  [N0015]=/data/legs/rpete/flight/hrci_qe/N0015/qe
   #[caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j
@@ -41,7 +44,7 @@ isuffix=''
 sqeu=(
   #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
   #[N0011pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v11
-  [N0017]=/data/legs/rpete/flight/hrcs_qeu/ARD/v17/qeu
+  [N0018]=/data/legs/rpete/flight/hrcs_qeu/ARD/v18/qeu
   #[caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
