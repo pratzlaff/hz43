@@ -59,10 +59,9 @@ s=(
 
 for o in $obsids
 do
-  src=$(obsid2source $o)
   punlearn ardlib
 
-  indir="data/$src/$o/tg_reprocess"
+  indir="data/$o/tg_reprocess"
   pha2=$(ls "$indir"/*_pha2.fits)
 
   false && instruments "$o" | grep -qi hrc-i && {

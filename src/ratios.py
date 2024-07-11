@@ -181,7 +181,7 @@ def dispersed_lc(tg_reprocess, exclude, merge):
 
         merge_disp_rates(data, merge)
 
-        obsids = list(data.keys())
+        obsids = np.array(list(data.keys()))
         years = np.array([ data[o]['year'] for o in obsids ])
         date_str = [ data[o]['date_str'] for o in obsids ]
         rates = { order:np.stack([data[o]['rate'][order] for o in obsids]).transpose() for order in orders }
@@ -191,10 +191,6 @@ def dispersed_lc(tg_reprocess, exclude, merge):
         ratios = { order:np.stack([data[o]['ratio'][order] for o in obsids]).transpose() for order in orders }
         ratio_errs = { order:np.stack([data[o]['ratio_err'][order] for o in obsids]).transpose() for order in orders }
 
-    print(obsids, years, date_str)
-    print(rates, rate_errs)
-    print(fluxes, flux_errs)
-    print(ratios, ratio_errs)
     return obsids, years, date_str, w1, w2, rates, rate_errs, fluxes, flux_errs, ratios, ratio_errs
 
 def merge_disp_rates(data, merge):
@@ -258,7 +254,7 @@ def zeroth_lc(detector, tg_reprocess, exclude, merge):
 
         merge_zero_rates(data, merge)
 
-        obsids = list(data.keys())
+        obsids = np.array(list(data.keys()))
         years = np.array([ data[o]['year'] for o in data ])
         rates = np.array([ data[o]['rate'] for o in data ])
         rate_errs = np.array([ data[o]['rate_err'] for o in data ])

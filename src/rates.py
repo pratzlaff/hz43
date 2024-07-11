@@ -54,6 +54,7 @@ def dispersed_rates(tg_reprocess='tg_reprocess', merge=None):
         obsid = obsids[i]
 
         # read PHA2
+        pha2  = util.pha2_file(obsid, tg_reprocess=tg_reprocess)
         d, h = util.read_pha2(util.pha2_file(obsid, tg_reprocess=tg_reprocess))
         date_str.append(h['date-obs'][:10])
 
