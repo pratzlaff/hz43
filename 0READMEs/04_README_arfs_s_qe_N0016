@@ -59,6 +59,14 @@ s=(
 
 for o in $obsids
 do
+
+  case $o in
+      78377 | 78427)
+	  continue
+	  ;;
+      *) ;;
+  esac
+
   punlearn ardlib
 
   indir="data/$o/tg_reprocess"
@@ -105,5 +113,17 @@ do
   }
 
   punlearn ardlib
+
+  case $o in
+      28377 | 28427)
+	  newo=${o/2/7} # e.g., 28377 -> 78377
+	  ls $outdir/*${o}* 2>/dev/null |
+	      while read f
+	      do
+		  ln -fs $(basename $f) $(echo $f | sed s/${o}/${newo}/)
+	      done
+      ;;
+      *) ;;
+  esac
 
 done

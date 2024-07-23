@@ -83,10 +83,4 @@ do
 	ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $pha2) $outdir/$pha2l
 
     done
-
-    ls arfs/*/*${obsids[old]}* 2>/dev/null |
-	while read f
-	do
-	    ln -fs $(basename $f) $(echo $f | sed s/${obsids[old]}/${obsids[new]}/)
-	done
 done
