@@ -1,0 +1,92 @@
+#! /bin/bash
+
+set -e
+set -o pipefail
+
+. ~/.bash_aliases
+shopt -s expand_aliases
+
+ciao
+
+. /data/legs/rpete/flight/analysis_functions/tmppdir.bash
+
+declare -A time base obsids tg_order_list
+
+tg_order_list=(
+    ['HRC-S']=-1,1,-2,2,-3,3
+    ['HRC-I']=-1,1
+)
+
+time=(
+    [old_28377]=833996762.38510537:834001803.33543313
+    [new_28377]=834001975.53544438:834006772.53575635
+    [old_28427]=834518958.91906822:834524996.16946101
+    [new_28427]=834525190.91947365:834528969.06972170
+)
+
+base=(
+    [old]=oldHV
+    [new]=newHV
+)
+
+for obsid in 28377 28427
+do
+
+    obsids=(
+	[old]=$obsid
+	[new]=${obsid/2/7}
+    )
+
+    indir=./data/$obsid/tg_reprocess
+
+    evt2_orig=$(ls $indir/hrcf${obsid}N???_evt2.fits.orig)
+    pha2_orig=$(ls $indir/hrcf${obsid}N???_pha2.fits.orig)
+
+    [[ -f $evt2_orig && -f $pha2_orig ]] || {
+	echo -e "oops:\n\t$evt2_orig\n\t$pha2_orig" 1>&2
+	exit 1
+    }
+
+    detnam=$(dmkeypar $evt2_orig detnam ec+)
+
+    rm -rf ./data/${obsids[new]}
+    mkdir -p ./data/${obsids[new]}/tg_reprocess
+
+    for hv in old new
+    do
+	echo $obsid $hv ${time[${hv}_${obsid}]}
+
+	evt2=$indir/evt2.fits.${base[$hv]}
+	pha2=$indir/pha2.fits.${base[$hv]}
+
+	dmcopy ${evt2_orig}'[time='${time[${hv}_${obsid}]}']' $evt2 cl+
+	dmappend ${evt2_orig}'[region][subspace -time]' $evt2
+	tgextract infile=$evt2 outfile=$pha2 \
+		  tg_srcid_list=all \
+		  tg_part_list=header_value \
+		  inregion_file=CALDB \
+		  tg_order_list=${tg_order_list[$detnam]} \
+		  cl+ \
+		  outfile_type=pha_typeII \
+		  ancrfile=none \
+		  respfile=none
+
+	# evt2, pha2 link names
+	evt2l=$(basename ${evt2_orig%.*})
+	pha2l=$(basename ${pha2_orig%.*})
+
+	evt2l=${evt2l/${obsids[old]}/${obsids[$hv]}}
+	pha2l=${pha2l/${obsids[old]}/${obsids[$hv]}}
+
+	outdir=./data/${obsids[$hv]}/tg_reprocess
+	ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $evt2) $outdir/$evt2l
+	ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $pha2) $outdir/$pha2l
+
+    done
+
+    ls arfs/*/*${obsids[old]}* 2>/dev/null |
+	while read f
+	do
+	    ln -fs $(basename $f) $(echo $f | sed s/${obsids[old]}/${obsids[new]}/)
+	done
+done

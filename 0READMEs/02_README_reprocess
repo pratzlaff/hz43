@@ -1,9 +1,14 @@
 #! /bin/bash
 
+set -e
+set -o pipefail
+
 . ~/.bash_aliases
 shopt -s expand_aliases
 
 ciao
+
+. /data/legs/rpete/flight/analysis_functions/tmppdir.bash
 
 . src/functions.bash
 
