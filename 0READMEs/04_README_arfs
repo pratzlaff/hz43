@@ -6,12 +6,12 @@
 obsids="$@"
 
 mkarfs() {
-    n=32
+    n=21
     [ $# -eq 1 ] && n=$1
     . ./src/functions.bash
     . /data/legs/rpete/flight/analysis_functions/util.bash
     obsids=$(obsids)
-    #obsids=$(grep '^[0-9]' obsids | grep -i hrc-i | cut -f1)
+    obsids=$(grep '^[0-9]' obsids | grep -i hrc-s | cut -f1)
     screen -dmS arfs
     eval "for i in {1..$n}"'
     do
@@ -47,7 +47,7 @@ isuffix=''
 sqeu=(
   #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
   #[N0011pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v11
-  [N0018]=/data/legs/rpete/flight/hrcs_qeu/ARD/v18/qeu
+  [N0019]=/data/legs/rpete/flight/hrcs_qeu/ARD/v19/qeu
   #[caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
@@ -116,7 +116,7 @@ do
 	      do
 		  ln -fs $(basename $f) $(echo $f | sed s/${o}/${newo}/)
 	      done
-      ;;
+	  ;;
       *) ;;
   esac
 
