@@ -12,7 +12,7 @@ ciao
 
 . src/functions.bash
 
-tgreprocess=/data/legs/rpete/flight/dev/tg_reprocess
+tgreprocess=/data/legs/rpete/flight/devel/tg_reprocess
 
 # whether to force reprocessing if tg_reprocess outdir already exists
 force=1
@@ -74,8 +74,7 @@ do
             clobber=yes 2>&1 | tee -a $logfile
     }
 
-
-    instruments "$o" | grep -qi hrc-s && {
+    false && instruments "$o" | grep -qi hrc-s && {
 	outdir=tg_reprocess_pifilter
         logfile=data/$o/tg_reprocess_pifilter.log
 	outdirfull=data/$o/$outdir
@@ -91,6 +90,15 @@ do
 
     }
     rm -f data/$o/$outdir/*_evt1{a,}.fits
+
+    [ $o -eq 28377 -o $o -eq 28427 ] && {
+	pha2=$(ls $outdirfull/*_pha2.fits)
+	evt2=$(ls $outdirfull/*_evt2.fits)
+	for f in $pha2 $evt2
+	do
+	    mv $f $f.orig
+	done
+    }
 done
 
 # after this is done, scan images to make sure they are all on-axis

@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -e
+set -o pipefail
+
 . ~/.bash_aliases
 shopt -s expand_aliases
 
@@ -15,6 +18,13 @@ mkdir -p data
 cd data
 for o in $(obsids)
 do
+    case $o in
+	78377 | 78427)
+	    continue
+	    ;;
+	*) ;;
+    esac
+
     files=evt1,bpix,msk,flt,asol,dtf
     download_chandra_obsid $o $files
 done

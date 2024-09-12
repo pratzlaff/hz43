@@ -31,7 +31,6 @@ base=(
 
 for obsid in 28377 28427
 do
-
     obsids=(
 	[old]=$obsid
 	[new]=${obsid/2/7}
@@ -79,8 +78,23 @@ do
 	pha2l=${pha2l/${obsids[old]}/${obsids[$hv]}}
 
 	outdir=./data/${obsids[$hv]}/tg_reprocess
-	ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $evt2) $outdir/$evt2l
-	ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $pha2) $outdir/$pha2l
+	rm -f $outdir/$evt2l
+	rm -f $outdir/$pha2l
+
+	# ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $evt2) $outdir/$evt2l
+	# ln -fs ../../${obsids[old]}/tg_reprocess/$(basename $pha2) $outdir/$pha2l
+
+	cp -a ./data/${obsids[old]}/tg_reprocess/$(basename $evt2) $outdir/$evt2l
+	cp -a ./data/${obsids[old]}/tg_reprocess/$(basename $pha2) $outdir/$pha2l
+
+	[ "$hv" == new ] && {
+	    ln -fs ../${obsids[old]}/primary $outdir/../primary
+	    cp -a ./data/${obsids[old]}/secondary $outdir/..
+	    for f in $evt2l $pha2l
+	    do
+		dmhedit $outdir/"$f" none add obs_id ${obsids[$hv]}
+	    done
+	}
 
     done
 done

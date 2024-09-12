@@ -413,18 +413,34 @@ def qeu_params(lc_0, lc_disp, args):
 
     hv_1_date = ymd2frac(2012, 3, 29)
     hv_2_date = ymd2frac(2021, 5, 14)
-    hv_changes = {14422 : '2012-03-29',
-                 24575 : '2021-05-14',
+    hv_3_date = ymd2frac(2024, 9, 13)
+    hv_changes = { 14422 : '2012-03-29',
+                   24575 : '2021-05-14',
+                   78427 : '2024-09-13',
                  }
     for i in ind:
-        cvsd_year.append(0.5*(d['year'][i]+d['year'][i-1]))
-        cvsd.append(ymd2datestr(*frac2ymd(cvsd_year[-1])))
 
         o = d['obsid'][i]
+
+        # FIXME: special case
+        if o == 78427:
+            continue
+        if o == 28427:
+            cvsd_year.append(0.5*(d['year'][i]+d['year'][i-2]))
+        else:
+            cvsd_year.append(0.5*(d['year'][i]+d['year'][i-1]))
+        cvsd.append(ymd2datestr(*frac2ymd(cvsd_year[-1])))
+
         obsid.append(o)
         if o in hv_changes:
             cvsd[-1] = hv_changes[o]
             cvsd_year[-1] = ymd2frac(*datestr2ymd(cvsd[-1]))
+
+        # FIXME: special case
+        if o == 29452:
+            obsid.append(78427)
+            cvsd.append(hv_changes[78427])
+            cvsd_year.append(ymd2frac(*datestr2ymd(cvsd[-1])))
 
     # these are the dates of the middle of the time period each file
     # will cover
@@ -490,8 +506,16 @@ def qeu_params(lc_0, lc_disp, args):
     ind = np.where(year_eff > hv_2_date)[0]
     in_n = d['obsid'].size
     out_n = len(cvsd)
+
     for i in ind:
         j = -(out_n-i)
+
+        # FIXME: special cases resulting from 78427
+        if i == 35:
+            j -= 2
+        if i == 33 or i == 34:
+            j += 1
+
         if obsid[i] != d['obsid'][j]:
             raise ValueError(f'{i}\t{j}\t{in_n}\t{out_n}\t{obsid[i]}\t{d["obsid"][j]}')
         r0[i] = d['r_0'][j]
