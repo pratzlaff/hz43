@@ -413,10 +413,10 @@ def qeu_params(lc_0, lc_disp, args):
 
     hv_1_date = ymd2frac(2012, 3, 29)
     hv_2_date = ymd2frac(2021, 5, 14)
-    hv_3_date = ymd2frac(2024, 9, 13)
+    hv_3_date = ymd2frac(2024, 9, 20)
     hv_changes = { 14422 : '2012-03-29',
                    24575 : '2021-05-14',
-                   78427 : '2024-09-13',
+                   78427 : '2024-09-20',
                  }
     for i in ind:
 
