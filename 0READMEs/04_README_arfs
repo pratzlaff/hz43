@@ -11,7 +11,7 @@ mkarfs() {
     . ./src/functions.bash
     . /data/legs/rpete/flight/analysis_functions/util.bash
     obsids=$(obsids)
-    obsids=$(grep '^[0-9]' obsids | grep -i hrc-s | cut -f1)
+    obsids=$(\grep '^[0-9]' obsids | \grep -i hrc-i | cut -f1)
     screen -dmS arfs
     eval "for i in {1..$n}"'
     do
@@ -36,8 +36,7 @@ declare -A iqe sqeu
 
 # HRC-I QE directories
 iqe=(
-  #[N0014]=/data/legs/rpete/flight/hrci_qe/N0014/qe
-  [N0015]=/data/legs/rpete/flight/hrci_qe/N0015/qe
+  [N0016]=/data/legs/rpete/flight/hrci_qe/N0016/qe
   #[caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j
@@ -59,7 +58,7 @@ do
   indir="data/$o/tg_reprocess"
   pha2=$(ls "$indir"/*_pha2.fits)
 
-  true && instruments "$o" | grep -qi hrc-i && {
+  true && instruments "$o" | \grep -qi hrc-i && {
     for v in "${!iqe[@]}"; do
       outdir=./arfs/I_qe_"${v}${isuffix}"
       qedir=${iqe["$v"]}
@@ -76,7 +75,7 @@ do
     done
   }
 
-  true && instruments "$o" | grep -qi hrc-s && {
+  true && instruments "$o" | \grep -qi hrc-s && {
     for v in "${!sqeu[@]}"; do
       outdir=./arfs/S_qeu_"$v"
       qeudir=${sqeu["$v"]}

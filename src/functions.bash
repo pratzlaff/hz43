@@ -16,18 +16,18 @@ band_range() {
 
 obsids()
 {
-    grep '^[0-9]' "${basedir}/obsids" | cut -f 1 #| tail -2
+    \grep '^[0-9]' "${basedir}/obsids" | cut -f 1 #| tail -2
 #    grep '^[0-9]' "${basedir}/obsids" | grep -i hrc-s | cut -f 1 | tail -6 | head -2
 }
 
 instruments()
 {
     local obsid="$1"
-    local f=$(ls "$datadir/$obsid"/tg_reprocess/*_evt2.fits 2>/dev/null)
+    local f=$(\ls "$datadir/$obsid"/tg_reprocess/*_evt2.fits 2>/dev/null)
 
     if [ -z "$f" ]
     then
-	grep "$obsid" "${basedir}/obsids" | perl -anle 'print $F[1]'
+	\grep "$obsid" "${basedir}/obsids" | perl -anle 'print $F[1]'
 	return
     fi
 
@@ -37,19 +37,19 @@ instruments()
 asol_stack_old()
 {
     local dir="$1"
-    ls $dir/pcadf*asol1.fits* | perl -le 'chomp(@f=<>); @t=map { /pcadf(\d{9})/ } @f; @t{@t}=(); @o=(); print join(",", map { $t=$_; (grep/\Q$t\E/,@f)[-1]} sort keys %t)'
+    \ls $dir/pcadf*asol1.fits* | perl -le 'chomp(@f=<>); @t=map { /pcadf(\d{9})/ } @f; @t{@t}=(); @o=(); print join(",", map { $t=$_; (grep/\Q$t\E/,@f)[-1]} sort keys %t)'
 }
 
 pbk_select()
 {
     local dir="$1"
-    ls $dir/*pbk0.fits* | tail -1
+    \ls $dir/*pbk0.fits* | tail -1
 }
 
 msk_select()
 {
     local dir="$1"
-    ls $dir/acisf*msk1.fits* | tail -1
+    \ls $dir/acisf*msk1.fits* | tail -1
 }
 
 detnam()
@@ -121,7 +121,7 @@ xspec_fit()
     local outdir=data/$obsid/fit
     mkdir -p $outdir
 
-    local pha2=`ls "$tgdir"/hrcf*_pha2.fits`
+    local pha2=`\ls "$tgdir"/hrcf*_pha2.fits`
     local base=`echo "$pha2" | sed -e 's/_pha2.fits//'`
     local base=`basename "$base"`
     local postfix=_LEG
@@ -340,7 +340,7 @@ EOF
 		)
 	    ;;
 	*HRC*)
-	    local pha2=`ls "$dir"/tg_reprocess/hrcf*_pha2.fits`
+	    local pha2=`\ls "$dir"/tg_reprocess/hrcf*_pha2.fits`
 	    local base=`echo "$pha2" | sed -e 's/_pha2.fits//'`
 	    resptext=$(cat <<EOF
     orders=range(1, 11)
@@ -447,10 +447,10 @@ hrcs_garfs_old() {
 
     local datadir="$datadir/$obsid"
 
-    local pha2=$(ls "$datadir"/tg_reprocess/hrcf*_pha2.fits)
-    local evt2=$(ls "$datadir"/tg_reprocess/hrcf*_evt2.fits)
-    local dtf1=$(ls "$datadir"/primary/hrcf*_dtf1.fits* | tail -1)
-    local bpix1=$(ls "$datadir"/secondary/hrcf*_bpix1.fits* | tail -1)
+    local pha2=$(\ls "$datadir"/tg_reprocess/hrcf*_pha2.fits)
+    local evt2=$(\ls "$datadir"/tg_reprocess/hrcf*_evt2.fits)
+    local dtf1=$(\ls "$datadir"/primary/hrcf*_dtf1.fits* | tail -1)
+    local bpix1=$(\ls "$datadir"/secondary/hrcf*_bpix1.fits* | tail -1)
     local asol=$(asol_stack "$datadir/primary")
 
     local order=1
