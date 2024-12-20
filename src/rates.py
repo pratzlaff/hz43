@@ -3,6 +3,7 @@ import glob
 import argparse
 import astropy.io.fits
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -260,15 +261,24 @@ def main():
     parser.add_argument('--tg_reprocess_hrcs', default='tg_reprocess', help='tg_reprocess output directory for HRC-S.')
     parser.add_argument('--noi', help='Do not plot I curves.', action='store_true')
     parser.add_argument('--nos', help='Do not plot S curves.', action='store_true')
+    parser.add_argument('--nodisp', help='Do not plot individual observation S dispersed rates.', action='store_true')
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
     parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077]])
+    parser.add_argument('--width', type=float, default=11, help='PDF width in inches.')
+    parser.add_argument('--height', type=float, default=8.5, help='PDF height in inches.')
+    parser.add_argument('--lw', type=float, default=1, help='Line widths.')
+    parser.add_argument('--fs', type=float, default=10, help='Font sizes.')
     args = parser.parse_args()
+
+    matplotlib.rcParams['lines.linewidth'] = args.lw
+    matplotlib.rcParams['axes.linewidth'] = args.lw
+    matplotlib.rcParams['font.size'] = args.fs
 
     if args.pdf:
         pdf = PdfPages(args.pdf)
-        figsize = (11, 8.5)
+        figsize = (args.width, args.height)
         plot_dims = (1, 1)
         fig = plt.figure(figsize=figsize)
 
@@ -295,7 +305,7 @@ def main():
         plt.show()
     plt.clf()
 
-    if not args.nos:
+    if not args.nos and not args.nodisp:
         plot_disp_wavdep(args, s_disp)
 
     if args.pdf:

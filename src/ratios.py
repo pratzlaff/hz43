@@ -300,6 +300,7 @@ def plot_zero(d, args, label=None, relative=True):
     else:
         y = d['ratio']
         yerr = d['ratio_err']
+    #print(x, y, yerr)
     plt.errorbar(x, y, yerr, label=label)
 
 def plot_dispersed(d, order, index, color=None):
