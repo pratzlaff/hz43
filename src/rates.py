@@ -265,7 +265,7 @@ def main():
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
-    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077]])
+    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077], [28428,30696]])
     parser.add_argument('--width', type=float, default=11, help='PDF width in inches.')
     parser.add_argument('--height', type=float, default=8.5, help='PDF height in inches.')
     parser.add_argument('--lw', type=float, default=1, help='Line widths.')

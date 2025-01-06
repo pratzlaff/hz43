@@ -420,28 +420,15 @@ def qeu_params(lc_0, lc_disp, args):
                    78427 : '2024-09-20',
                  }
     for i in ind:
-
         o = d['obsid'][i]
+        obsid.append(o)
 
-        # FIXME: special case
-        if o == 78427:
-            continue
-        if o == 28427:
-            cvsd_year.append(0.5*(d['year'][i]+d['year'][i-2]))
+        if o in hv_changes:
+            cvsd_year.append(ymd2frac(*datestr2ymd(hv_changes[o])))
+            cvsd.append(hv_changes[o])
         else:
             cvsd_year.append(0.5*(d['year'][i]+d['year'][i-1]))
-        cvsd.append(ymd2datestr(*frac2ymd(cvsd_year[-1])))
-
-        obsid.append(o)
-        if o in hv_changes:
-            cvsd[-1] = hv_changes[o]
-            cvsd_year[-1] = ymd2frac(*datestr2ymd(cvsd[-1]))
-
-        # FIXME: special case
-        if o == 29452:
-            obsid.append(78427)
-            cvsd.append(hv_changes[78427])
-            cvsd_year.append(ymd2frac(*datestr2ymd(cvsd[-1])))
+            cvsd.append(ymd2datestr(*frac2ymd(cvsd_year[-1])))
 
     # these are the dates of the middle of the time period each file
     # will cover
@@ -505,23 +492,32 @@ def qeu_params(lc_0, lc_disp, args):
 
     # just duplicate observed ratios after 2nd HV change
     ind = np.where(year_eff > hv_2_date)[0]
-    in_n = d['obsid'].size
-    out_n = len(cvsd)
+    nobsids = d['obsid'].size
+    nfiles = len(cvsd)
+    ndiff = nobsids-nfiles
 
     for i in ind:
-        j = -(out_n-i)
-
-        # FIXME: special cases resulting from 78427
-        if i == 35:
-            j -= 2
-        if i == 33 or i == 34:
-            j += 1
+        j = i+ndiff
 
         if obsid[i] != d['obsid'][j]:
             raise ValueError(f'{i}\t{j}\t{in_n}\t{out_n}\t{obsid[i]}\t{d["obsid"][j]}')
         r0[i] = d['r_0'][j]
         rpos[i] = d['r_pos'][j]
         rneg[i] = d['r_neg'][j]
+
+    # special case of 29452 jumping ahead of 78427...
+    i = np.where(np.array(obsid)==29452)[0][0]
+    cvsd_, cvsd_year_, obsid_, r0_, rpos_, rneg_ = cvsd[i], cvsd_year[i], obsid[i], r0[i], rpos[i], rneg[i]
+    cvsd[i], cvsd_year[i], obsid[i], r0[i], rpos[i], rneg[i] = cvsd[i-1], cvsd_year[i-1], obsid[i-1], r0[i-1], rpos[i-1], rneg[i-1]
+    cvsd[i-1], cvsd_year[i-1], obsid[i-1], r0[i-1], rpos[i-1], rneg[i-1] = cvsd_, cvsd_year_, obsid_, r0_, rpos_, rneg_
+
+    # ...and the following observation has a new CVSD...
+    cvsd_year[i+1] = 0.5*(d['year'][i+1+ndiff]+ymd2frac(*datestr2ymd(hv_changes[78427])))
+    cvsd[i+1] = ymd2datestr(*frac2ymd(cvsd_year[i+1]))
+
+    # ...not that it matters, but recalculate year_eff
+    year_eff = np.copy(cvsd_year)
+    year_eff[:-1] = 0.5 * (cvsd_year[1:] + cvsd_year[:-1])
 
     print('\t'.join(('obsid', 'cvsd', 'year_eff', 'r0', 'rpos', 'rneg')))
     print('\t'.join(('S',)*2+('N',)*4))
