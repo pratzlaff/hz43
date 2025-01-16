@@ -103,12 +103,12 @@ def dispersed_flux(src, bg, resp, bin_lo, bin_hi, wav_lo, wav_hi, hdr, predicted
     return rate, rate_err, flux_, flux_err, ratio, ratio_err
 
 # get HRC-S/LETG counts light curves for dispersed orders
-def dispersed_lc(tg_reprocess, exclude, merge):
+def dispersed_lc(tg_reprocess, exclude, merge, archive=False):
     global maxorder
 
     orders = { 'neg':-1, 'pos':+1 }
 
-    obsids, years = hz43.obsids_years('HRC-S', exclude=exclude)
+    obsids, years = hz43.obsids_years('HRC-S', exclude=exclude, archive=archive)
     w1, w2 = wav_ranges()
 
     model_flux = None
@@ -127,7 +127,7 @@ def dispersed_lc(tg_reprocess, exclude, merge):
     for i in range(obsids.size):
         obsid = obsids[i]
 
-        bin_lo, bin_hi, resp = response.get_response(obsid, 'LEG', maxorder=maxorder)
+        bin_lo, bin_hi, resp = response.get_response(obsid, 'LEG', maxorder=maxorder, archive=archive)
 
         if model_flux is None:
             model_wav, model_flux = hz43.model()
@@ -141,7 +141,7 @@ def dispersed_lc(tg_reprocess, exclude, merge):
         factor = { order : predicted_rate[order][0] / predicted_rate[order].sum(axis=0) for order in resp }
 
         # read PHA2
-        d, h = util.read_pha2(util.pha2_file(obsid, tg_reprocess=tg_reprocess))
+        d, h = util.read_pha2(util.pha2_file(obsid, tg_reprocess=tg_reprocess, archive=archive))
 
         date_str.append(h['date-obs'][:10])
 
@@ -232,16 +232,16 @@ def merge_disp_rates(data, merge):
             raise
 
 # get HRC-S/LETG counts light curves for zeroth order
-def zeroth_lc(detector, tg_reprocess, exclude, merge):
+def zeroth_lc(detector, tg_reprocess, exclude, merge, archive=False):
     if (detector == 'HRC-S'):
-        obsids, years = hz43.obsids_years('HRC-S', exclude=exclude)
+        obsids, years = hz43.obsids_years('HRC-S', exclude=exclude, archive=archive)
     elif (detector == 'HRC-I'):
-        obsids, years = hz43.obsids_years('HRC-I', exclude=exclude)
+        obsids, years = hz43.obsids_years('HRC-I', exclude=exclude, archive=archive)
     else:
         raise ValueError(det)
 
-    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
-    model_rates = hz43.predicted_rates(obsids)
+    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess, archive=archive)
+    model_rates = hz43.predicted_rates(obsids, archive=archive)
 
     if merge is not None:
         data = { obsids[i] : {'year':years[i],
@@ -263,7 +263,7 @@ def zeroth_lc(detector, tg_reprocess, exclude, merge):
 
     date_obs = []
     for i in range(len(obsids)):
-        date_obs.append(util.read_header(util.pha2_file(obsids[i], tg_reprocess=tg_reprocess))['date-obs'][0:10])
+        date_obs.append(util.read_header(util.pha2_file(obsids[i], tg_reprocess=tg_reprocess, archive=archive))['date-obs'][0:10])
 
     return obsids, years, date_obs, rates, rate_errs, model_rates, rates/model_rates, rate_errs/model_rates
 
@@ -544,14 +544,14 @@ def write_disp_ratios(lc_0, lc_disp):
             f'{d["rerr_neg"][i]:.4f}',
         )) + '\n')
 
-def lc_0(detnam, tg_reprocess, exclude, merge):
+def lc_0(detnam, tg_reprocess, exclude, merge, archive=False):
     lc_0 = {}
-    lc_0.update(zip(('obsid', 'year', 'date-obs', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess, exclude, merge)))
+    lc_0.update(zip(('obsid', 'year', 'date-obs', 'rate', 'rate_err', 'model_rate', 'ratio', 'ratio_err'), zeroth_lc(detnam, tg_reprocess, exclude, merge, archive=archive)))
     return lc_0
 
-def lc_disp(tg_reprocess, exclude, merge):
+def lc_disp(tg_reprocess, exclude, merge, archive=False):
     lc_disp = {}
-    lc_disp.update(zip(('obsid', 'year', 'date-obs', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess, exclude, merge)))
+    lc_disp.update(zip(('obsid', 'year', 'date-obs', 'bin_lo', 'bin_hi', 'rate', 'rate_err', 'flux', 'flux_err', 'ratio', 'ratio_err'), dispersed_lc(tg_reprocess, exclude, merge, archive=archive)))
     return lc_disp
 
 
@@ -632,6 +632,7 @@ def main():
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
     parser.add_argument('--merge', action='append', nargs='+', type=int)
+    parser.add_argument('--archive', action=argparse.BooleanOptionalAction, help='Use archive paths.')
 
     args = parser.parse_args()
 
@@ -645,11 +646,11 @@ def main():
     hrcs_lc_disp = None
 
     if not args.noi:
-        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci, args.exclude, args.merge)
+        hrci_lc_0 = lc_0('HRC-I', args.tg_reprocess_hrci, args.exclude, args.merge, archive=args.archive)
 
     if not args.nos:
-        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs, args.exclude, args.merge)
-        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs, args.exclude, args.merge)
+        hrcs_lc_0 = lc_0('HRC-S', args.tg_reprocess_hrcs, args.exclude, args.merge, archive=args.archive)
+        hrcs_lc_disp = lc_disp(args.tg_reprocess_hrcs, args.exclude, args.merge, archive=args.archive)
 
     figsize = (11, 8.5)
 

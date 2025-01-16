@@ -1,5 +1,4 @@
 import sys
-import glob
 import argparse
 import astropy.io.fits
 import numpy as np
@@ -38,10 +37,10 @@ def wav_ranges():
     return w1, w2
 
 # get HRC-S/LETG rates for dispersed orders
-def dispersed_rates(tg_reprocess='tg_reprocess', merge=None):
+def dispersed_rates(tg_reprocess='tg_reprocess', merge=None, archive=False):
     orders = { 'neg':-1, 'pos':+1 }
 
-    obsids, years = hz43.obsids_years('HRC-S')
+    obsids, years = hz43.obsids_years('HRC-S', archive=archive)
     w1, w2 = wav_ranges()
 
     date_str = []
@@ -55,7 +54,7 @@ def dispersed_rates(tg_reprocess='tg_reprocess', merge=None):
         obsid = obsids[i]
 
         # read PHA2
-        pha2  = util.pha2_file(obsid, tg_reprocess=tg_reprocess)
+        pha2  = util.pha2_file(obsid, tg_reprocess=tg_reprocess, archive=archive)
         d, h = util.read_pha2(util.pha2_file(obsid, tg_reprocess=tg_reprocess))
         date_str.append(h['date-obs'][:10])
 
@@ -113,15 +112,15 @@ def merge_disp_rates(data, merge):
             raise
 
 # get HRC rates for 0th order
-def zeroth_rates(detector, tg_reprocess='tg_reprocess', merge=None):
+def zeroth_rates(detector, tg_reprocess='tg_reprocess', merge=None, archive=False):
     if (detector == 'HRC-S'):
-        obsids, years = hz43.obsids_years('HRC-S')
+        obsids, years = hz43.obsids_years('HRC-S', archive=archive)
     elif (detector == 'HRC-I'):
-        obsids, years = hz43.obsids_years('HRC-I')
+        obsids, years = hz43.obsids_years('HRC-I', archive=archive)
     else:
         raise ValueError(det)
 
-    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess)
+    rates, rate_errs, exposures = util.zeroth_rates(obsids, tg_reprocess=tg_reprocess, archive=archive)
 
     data = { obsids[i] : {'year':years[i],
                           'rate':rates[i],
@@ -159,7 +158,7 @@ def plot_0th(args, detector):
                      'HRC-S' : args.tg_reprocess_hrcs,
                     }.get(detector)
     rates_0 = {}
-    rates_0.update(zip(('year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess, merge=args.merge)))
+    rates_0.update(zip(('year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess, merge=args.merge, archive=args.archive)))
     year = rates_0['year']
     rate = rates_0['rate']
     rate_err = rates_0['rate_err']
@@ -270,6 +269,7 @@ def main():
     parser.add_argument('--height', type=float, default=8.5, help='PDF height in inches.')
     parser.add_argument('--lw', type=float, default=1, help='Line widths.')
     parser.add_argument('--fs', type=float, default=10, help='Font sizes.')
+    parser.add_argument('--archive', action=argparse.BooleanOptionalAction, help='Use archive paths.')
     args = parser.parse_args()
 
     matplotlib.rcParams['lines.linewidth'] = args.lw
@@ -288,7 +288,7 @@ def main():
     if not args.nos:
         plot_0th(args, 'HRC-S')
         s_disp = {}
-        s_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err'), dispersed_rates(tg_reprocess=args.tg_reprocess_hrcs, merge=args.merge)))
+        s_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err'), dispersed_rates(tg_reprocess=args.tg_reprocess_hrcs, merge=args.merge, archive=args.archive)))
         plot_disp(args, s_disp)
 
 
