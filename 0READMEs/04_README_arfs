@@ -36,7 +36,7 @@ declare -A iqe sqeu
 
 # HRC-I QE directories
 iqe=(
-  [N0016]=/data/legs/rpete/flight/hrci_qe/N0016/qe
+  [N0017]=/data/legs/rpete/flight/hrci_qe/N0017/qe
   #[caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j

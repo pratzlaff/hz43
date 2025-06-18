@@ -16,7 +16,7 @@ band_range() {
 
 obsids()
 {
-    \grep '^[0-9]' "${basedir}/obsids" | cut -f 1 | tail -2
+    \grep '^[0-9]' "${basedir}/obsids" | cut -f 1 #| tail -1
 #    grep '^[0-9]' "${basedir}/obsids" | grep -i hrc-s | cut -f 1 | tail -6 | head -2
 }
 

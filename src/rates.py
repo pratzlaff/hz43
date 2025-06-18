@@ -55,7 +55,7 @@ def dispersed_rates(tg_reprocess='tg_reprocess', merge=None, archive=False):
 
         # read PHA2
         pha2  = util.pha2_file(obsid, tg_reprocess=tg_reprocess, archive=archive)
-        d, h = util.read_pha2(util.pha2_file(obsid, tg_reprocess=tg_reprocess))
+        d, h = util.read_pha2(pha2)
         date_str.append(h['date-obs'][:10])
 
         rows = {}
@@ -264,7 +264,7 @@ def main():
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
-    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077], [28428,30696]])
+    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077],[28428,30696],[29536,30960]])
     parser.add_argument('--width', type=float, default=11, help='PDF width in inches.')
     parser.add_argument('--height', type=float, default=8.5, help='PDF height in inches.')
     parser.add_argument('--lw', type=float, default=1, help='Line widths.')

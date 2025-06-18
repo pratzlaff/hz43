@@ -528,6 +528,8 @@ def qeu_params(lc_0, lc_disp, args):
 
 def write_disp_ratios(lc_0, lc_disp):
     d = collect_data(lc_0, lc_disp)
+    cols = ['obsid', 'date-obs', 'date', 'r_0', 'r_0_err', 'r_pos', 'r_pos_err', 'r_neg', 'r_neg_err']
+    sys.stderr.write('\t'.join(cols) + "\n")
     for i in range(len(lc_0['obsid'])):
         year, month, day = frac2ymd(d['year'][i])
         ymd = f'{year:04d}-{month:02d}-{day:02d}'
@@ -535,7 +537,6 @@ def write_disp_ratios(lc_0, lc_disp):
             str(d['obsid'][i]),
             d['date-obs'][i],
             str(d['year'][i]),
-            ymd,
             f'{d["r_0"][i]:.3f}',
             f'{d["rerr_0"][i]:.4f}',
             f'{d["r_pos"][i]:.3f}',
@@ -625,6 +626,7 @@ def main():
     parser.add_argument('-c', '--corrected', help='Plot corrected ratio curves.', action='store_true')
     parser.add_argument('--noi', help='Do not plot I curves.', action='store_true')
     parser.add_argument('--nos', help='Do not plot S curves.', action='store_true')
+    parser.add_argument('--nodispplots', help='Do not plot S curves across S1 and S3.', action='store_true')
     parser.add_argument('-a', '--absolute', help='Absolute rates.', action='store_true')
     parser.add_argument('-m', '--maxorder', help='Maximum ARF/RMF order to read.', default=3, type=int)
     #parser.add_argument('-e','--exclude', nargs='*', type=int, default=[24958,62635,25615], help='Exclude obsids')
@@ -666,13 +668,15 @@ def main():
             pdf.close()
         sys.exit()
 
-    plot_disp_wavdep_ratios(hrcs_lc_disp, args)
+    if not args.nodispplots:
+        plot_disp_wavdep_ratios(hrcs_lc_disp, args)
     write_disp_ratios(hrcs_lc_0, hrcs_lc_disp)
 
     if args.corrected:
         qeu_correct(hrcs_lc_0, hrcs_lc_disp, args)
         mkplots(hrci_lc_0, hrcs_lc_0, hrcs_lc_disp, args)
-        plot_disp_wavdep_ratios(hrcs_lc_disp, args)
+        if not args.nodispplots:
+            plot_disp_wavdep_ratios(hrcs_lc_disp, args)
         write_disp_ratios(hrcs_lc_0, hrcs_lc_disp)
 
     if args.resdir:
