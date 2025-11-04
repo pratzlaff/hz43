@@ -95,6 +95,8 @@ def dispersed_rates(tg_reprocess='tg_reprocess', merge=None, archive=False):
     return obsids, years, date_str, w1, w2, rates, rate_errs
 
 def merge_disp_rates(data, merge):
+    if not merge:
+        return
     # each element is an array of obsids to merge
     orders = ('neg', 'pos')
     for a in merge:
@@ -134,10 +136,11 @@ def zeroth_rates(detector, tg_reprocess='tg_reprocess', merge=None, archive=Fals
     rates = np.array([ data[o]['rate'] for o in data ])
     rate_errs = np.array([ data[o]['rate_err'] for o in data ])
 
-    return years, rates, rate_errs
+    return obsids, years, rates, rate_errs
 
 def merge_zero_rates(data, merge):
-
+    if not merge:
+        return
     # each element is an array of obsids to merge
     for a in merge:
         try:
@@ -158,7 +161,7 @@ def plot_0th(args, detector):
                      'HRC-S' : args.tg_reprocess_hrcs,
                     }.get(detector)
     rates_0 = {}
-    rates_0.update(zip(('year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess, merge=args.merge, archive=args.archive)))
+    rates_0.update(zip(('obsid', 'year', 'rate', 'rate_err'), zeroth_rates(detector, tg_reprocess=tg_reprocess, merge=args.merge, archive=args.archive)))
     year = rates_0['year']
     rate = rates_0['rate']
     rate_err = rates_0['rate_err']
@@ -176,12 +179,15 @@ def plot_0th(args, detector):
     plt.grid()
     plt.xlabel('Year')
     plt.ylabel(ylabel)
+    return rates_0['obsid'], year, y, yerr
 
 def plot_disp(args, rates_disp):
     d=rates_disp
     labels = { 'pos' : 'HRC-S: +1st', 'neg' : 'HRC-S: -1st' }
     linestyles = { 'pos' : '-', 'neg' : '--' }
     year = d['year']
+    y_ret = {}
+    yerr_ret = {}
     for order in d['bin_lo']:
         rate = d['rate'][order][0,:]
         rate_cmp = rate[0]
@@ -197,7 +203,10 @@ def plot_disp(args, rates_disp):
             yerr = rate_err
         
         label = labels[order] + f": {d['bin_lo'][order][0]:.0f}-{d['bin_hi'][order][0]:.0f} {symbols.ANGSTROM}"
+        y_ret[order] = y
+        yerr_ret[order] = yerr
         plt.errorbar(year, y, yerr, label=label, linestyle=linestyles[order])
+    return year, y_ret['pos'], yerr_ret['pos'], y_ret['neg'], yerr_ret['neg']
 
 def plot_disp_wavdep(args, rates_disp):
     global fig, pdf
@@ -250,6 +259,34 @@ def plot_disp_wavdep(args, rates_disp):
                 plt.show()
             plt.clf()
 
+# FIXME: obsids aren't matched to years due to merge
+def write_data_i(obsid, year, r_0, r_0_err):
+    cols = ['obsid', 'date', 'r_0', 'r_0_err']
+    sys.stderr.write('\t'.join(cols) + "\n")
+    for i in range(len(year)):
+        sys.stderr.write('\t'.join((
+            f'{obsid[i]}',
+            f'{year[i]:.5f}',
+            f'{r_0[i]:.3f}',
+            f'{r_0_err[i]:.4f}',
+        )) + '\n')
+
+# FIXME: obsids aren't matched to years due to merge
+def write_data_s(obsid, year, r_0, r_0_err, r_pos, r_pos_err, r_neg, r_neg_err):
+    cols = ['obsid', 'date', 'r_0', 'r_0_err', 'r_pos', 'r_pos_err', 'r_neg', 'r_neg_err']
+    sys.stderr.write('\t'.join(cols) + "\n")
+    for i in range(len(year)):
+        sys.stderr.write('\t'.join((
+            f'{obsid[i]}',
+            f'{year[i]:.5f}',
+            f'{r_0[i]:.3f}',
+            f'{r_0_err[i]:.4f}',
+            f'{r_pos[i]:.3f}',
+            f'{r_pos_err[i]:.4f}',
+            f'{r_neg[i]:.3f}',
+            f'{r_neg_err[i]:.4f}',
+        )) + '\n')
+
 def main():
     global fig, pdf
     parser = argparse.ArgumentParser(
@@ -264,7 +301,8 @@ def main():
     parser.add_argument('-a', '--absolute', help='Plot rates rather than ratios.', action='store_true')
     parser.add_argument('--ymin', type=float, help='Lower Y plot limit.')
     parser.add_argument('--ymax', type=float, help='Upper Y plot limit.')
-    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077],[28428,30696],[29536,30960]])
+    #parser.add_argument('-m', '--merge', type=int, action='append', nargs='+', default=[[25615,27916],[25614,29077],[28428,30696],[29536,30960]])
+    parser.add_argument('-m', '--merge', type=int, action='append', nargs='+')
     parser.add_argument('--width', type=float, default=11, help='PDF width in inches.')
     parser.add_argument('--height', type=float, default=8.5, help='PDF height in inches.')
     parser.add_argument('--lw', type=float, default=1, help='Line widths.')
@@ -283,14 +321,18 @@ def main():
         fig = plt.figure(figsize=figsize)
 
     if not args.noi:
-        plot_0th(args, 'HRC-I')
+        obsid, year, r_0, r_0_err = plot_0th(args, 'HRC-I')
+        if not args.merge:
+            print(args.merge)
+            write_data_i(obsid, year, r_0, r_0_err)
 
     if not args.nos:
-        plot_0th(args, 'HRC-S')
+        obsid, year, r_0, r_0_err = plot_0th(args, 'HRC-S')
         s_disp = {}
         s_disp.update(zip(('obsid', 'year', 'date', 'bin_lo', 'bin_hi', 'rate', 'rate_err'), dispersed_rates(tg_reprocess=args.tg_reprocess_hrcs, merge=args.merge, archive=args.archive)))
-        plot_disp(args, s_disp)
-
+        year, r_pos, r_pos_err, r_neg, r_neg_err = plot_disp(args, s_disp)
+        if not args.merge:
+            write_data_s(obsid, year, r_0, r_0_err, r_pos, r_pos_err, r_neg, r_neg_err)
 
     title = 'HRC HZ 43 Count Rate Ratios'
     if args.absolute:
