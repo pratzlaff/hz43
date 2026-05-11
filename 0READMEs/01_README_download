@@ -24,6 +24,6 @@ do
 	*) ;;
     esac
 
-    files=evt1,bpix,msk,flt,asol,dtf
+    files=evt1,bpix,msk,flt,asol,dtf,mtl
     download_chandra_obsid $o $files
 done
