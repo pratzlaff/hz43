@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+SCRIPTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 . ~/.bash_aliases
 shopt -s expand_aliases
 
@@ -9,7 +11,7 @@ ciao
 
 . /data/legs/rpete/flight/analysis_functions/tmppdir.bash
 
-. src/functions.bash
+. "$SCRIPTDIR"/../src/functions.bash
 
 tgreprocess=/data/legs/rpete/flight/devel/tg_reprocess
 

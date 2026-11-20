@@ -1,7 +1,7 @@
 #! /bin/bash
 
-set -e
-set -o pipefail
+set -eo pipefail
+SCRIPTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 . ~/.bash_aliases
 shopt -s expand_aliases
@@ -36,7 +36,7 @@ do
 	[new]=${obsid/2/7}
     )
 
-    indir=./data/$obsid/tg_reprocess
+    indir="$SCRIPTDIR"/../data/$obsid/tg_reprocess
 
     evt2_orig=$(ls $indir/hrcf${obsid}N???_evt2.fits.orig)
     pha2_orig=$(ls $indir/hrcf${obsid}N???_pha2.fits.orig)
@@ -48,8 +48,8 @@ do
 
     detnam=$(dmkeypar $evt2_orig detnam ec+)
 
-    rm -rf ./data/${obsids[new]}
-    mkdir -p ./data/${obsids[new]}/tg_reprocess
+    rm -rf "$SCRIPTDIR"/../data/${obsids[new]}
+    mkdir -p "$SCRIPTDIR"/../data/${obsids[new]}/tg_reprocess
 
     for hv in old new
     do
@@ -89,7 +89,7 @@ do
 
 	[ "$hv" == new ] && {
 	    ln -fs ../${obsids[old]}/primary $outdir/../primary
-	    cp -a ./data/${obsids[old]}/secondary $outdir/..
+	    cp -a "$SCRIPTDIR"/../data/${obsids[old]}/secondary $outdir/..
 	    for f in $evt2l $pha2l
 	    do
 		dmhedit $outdir/"$f" none add obs_id ${obsids[$hv]}

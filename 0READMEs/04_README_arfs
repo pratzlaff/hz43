@@ -1,7 +1,8 @@
 #! /bin/bash
 
-#set -e
-#set -o pipefail
+#set -eo pipefail
+
+SCRIPTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 obsids="$@"
 
@@ -23,7 +24,7 @@ mkarfs() {
 }
 
 . /data/legs/rpete/flight/analysis_functions/arfs.bash
-. src/functions.bash
+. "$SCRIPTDIR"/../src/functions.bash
 
 . ~/.bash_aliases
 shopt -s expand_aliases
@@ -36,18 +37,19 @@ declare -A iqe sqeu
 
 # HRC-I QE directories
 iqe=(
-  [N0017]=/data/legs/rpete/flight/hrci_qe/N0017/qe
-  #[caldb]=$CALDB/data/chandra/hrc/qe
+  #[N0017]=/data/legs/rpete/flight/hrci_qe/N0017/qe
+  [caldb]=$CALDB/data/chandra/hrc/qe
 )
 isuffix=.20210812j
+isuffix='_full'
 isuffix=''
 
 # HRC-S QEU directories
 sqeu=(
   #[N0009pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v09/qeu
   #[N0011pre]=/data/legs/rpete/flight/hrcs_qeu/ARD/v11
-  [N0019]=/data/legs/rpete/flight/hrcs_qeu/ARD/v19/qeu
-  #[caldb]=$CALDB/data/chandra/hrc/qeu
+  #[N0019]=/data/legs/rpete/flight/hrcs_qeu/ARD/v19/qeu
+  [caldb]=$CALDB/data/chandra/hrc/qeu
 )
 
 for o in $obsids

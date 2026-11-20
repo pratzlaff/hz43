@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+SCRIPTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 . ~/.bash_aliases
 shopt -s expand_aliases
 
@@ -11,7 +13,7 @@ ciao
 # download data
 #
 
-. src/functions.bash
+. "$SCRIPTDIR"/../src/functions.bash
 
 mkdir -p data
 cd data
